@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Meal Planner - Personalized Meal Plans</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🍽️ AI Meal Planner</h1>
+            <p class="subtitle">Generate personalized meal plans powered by AI</p>
+        </header>
+
+        <main>
+            <div class="input-section">
+                <div class="input-group">
+                    <label for="apiUrl">API Endpoint:</label>
+                    <input 
+                        type="text" 
+                        id="apiUrl" 
+                        placeholder="https://your-app.railway.app"
+                        value=""
+                    >
+                    <small>Enter your Railway API URL (or leave empty for localhost)</small>
+                </div>
+
+                <div class="input-group">
+                    <label for="queryInput">What kind of meal plan do you need?</label>
+                    <textarea 
+                        id="queryInput" 
+                        rows="3" 
+                        placeholder="e.g., Create a 5-day vegetarian meal plan with high protein"
+                    ></textarea>
+                </div>
+
+                <button id="generateBtn" class="btn-primary" onclick="generateMealPlan()">
+                    <span id="btnText">Generate Meal Plan</span>
+                    <span id="btnLoader" class="loader" style="display: none;"></span>
+                </button>
+
+                <div class="example-queries">
+                    <p class="examples-label">Try these examples:</p>
+                    <div class="example-chips">
+                        <button class="chip" onclick="setExample('Create a 3-day vegetarian meal plan')">
+                            3-day vegetarian
+                        </button>
+                        <button class="chip" onclick="setExample('Generate a 7-day low-carb, dairy-free meal plan with high protein')">
+                            Low-carb, high protein
+                        </button>
+                        <button class="chip" onclick="setExample('5-day Mediterranean diet plan with quick breakfast options')">
+                            Mediterranean diet
+                        </button>
+                        <button class="chip" onclick="setExample('I need a week of budget-friendly meals')">
+                            Budget-friendly
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="errorMessage" class="error-message" style="display: none;"></div>
+
+            <div id="results" class="results-section" style="display: none;">
+                <div class="summary-card">
+                    <h2>📊 Meal Plan Summary</h2>
+                    <div class="summary-grid">
+                        <div class="summary-item">
+                            <span class="summary-label">Duration</span>
+                            <span class="summary-value" id="summaryDuration">-</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Total Meals</span>
+                            <span class="summary-value" id="summaryMeals">-</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Estimated Cost</span>
+                            <span class="summary-value" id="summaryCost">-</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Avg Prep Time</span>
+                            <span class="summary-value" id="summaryTime">-</span>
+                        </div>
+                    </div>
+                    <div class="compliance-tags" id="complianceTags"></div>
+                </div>
+
+                <div id="mealPlanDays" class="meal-plan-days"></div>
+            </div>
+        </main>
+
+        <footer>
+            <p>Powered by OpenAI GPT & FastAPI</p>
+            <p class="footer-links">
+                <a href="#" onclick="openApiDocs(); return false;">API Documentation</a> |
+                <a href="https://github.com/yourusername/ml_meal_prep" target="_blank">GitHub</a>
+            </p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
+
