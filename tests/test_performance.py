@@ -1,11 +1,11 @@
 """
-Manual performance test to measure batch generation speed and diversity.
-Tests the efficiency of sequential generation with batch optimization.
+Performance test to measure batch generation speed and diversity.
+Tests sequential generation with batch optimization (all meals for a day in one API call).
 
 Usage:
-    python -m pytest tests/test_parallel_speed.py -v -s
+    python -m pytest tests/test_performance.py -v -s
     OR
-    python tests/test_parallel_speed.py
+    python tests/test_performance.py
 """
 import asyncio
 import time
@@ -13,7 +13,7 @@ import pytest
 from app.meal_generator import MealPlanGenerator
 
 @pytest.mark.asyncio
-async def test_parallel_speed_7_day():
+async def test_batch_generation_7_day():
     """
     Performance test: Generate a 7-day meal plan and measure speed + diversity.
     This demonstrates batch generation (all meals for a day in one call).
@@ -53,7 +53,7 @@ async def test_parallel_speed_7_day():
     assert diversity_score >= 85.0, f"Diversity too low: {diversity_score:.1f}%"
 
 @pytest.mark.asyncio
-async def test_parallel_speed_3_day():
+async def test_batch_generation_3_day():
     """
     Quick performance test with 3-day meal plan.
     """
@@ -86,7 +86,7 @@ async def test_parallel_speed_3_day():
 if __name__ == "__main__":
     # Allow running directly for quick testing
     print("Running batch generation performance tests...\n")
-    asyncio.run(test_parallel_speed_3_day())
+    asyncio.run(test_batch_generation_3_day())
     print("\n")
-    asyncio.run(test_parallel_speed_7_day())
+    asyncio.run(test_batch_generation_7_day())
 
