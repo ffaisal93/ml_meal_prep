@@ -16,6 +16,7 @@ Railway provides managed PostgreSQL databases. This is the recommended approach 
 2. **Railway automatically provides `DATABASE_URL`:**
    - Railway automatically sets the `DATABASE_URL` environment variable
    - The application will detect and use it automatically
+   - **Use `DATABASE_URL`** (internal, private) - NOT `DATABASE_PUBLIC_URL`
    - No additional configuration needed!
 
 3. **Verify:**
