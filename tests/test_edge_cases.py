@@ -78,15 +78,16 @@ class TestAssignmentEdgeCases:
     
     @pytest.mark.asyncio
     async def test_conflicting_requirements_generation(self):
-        """Test that conflicting requirements raise an error during generation"""
+        """Test that conflicting requirements are resolved with a warning"""
         query = "Pescatarian vegan meal plan"
         
-        # Should raise ValueError for contradictions
-        with pytest.raises(ValueError) as exc_info:
-            await self.generator.generate(query)
+        # Should succeed and resolve contradictions
+        result = await self.generator.generate(query)
         
-        assert "contradictory" in str(exc_info.value).lower() or \
-               "contradiction" in str(exc_info.value).lower()
+        assert "meal_plan" in result
+        assert len(result["meal_plan"]) > 0
+        assert "warning" in result
+        assert result["warning"] is not None
     
     def test_empty_query(self):
         """Test empty query handling"""

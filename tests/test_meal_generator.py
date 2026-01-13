@@ -116,15 +116,23 @@ class TestMealPlanGenerator:
             assert len(result["meal_plan"]) == 7
     
     @pytest.mark.asyncio
-    async def test_contradiction_detection(self):
-        """Test that contradictions are detected and raise errors"""
+    async def test_contradiction_resolution(self):
+        """Test that contradictions are automatically resolved with a warning"""
         query = "vegan pescatarian meal plan"
         
-        with pytest.raises(ValueError) as exc_info:
-            await self.generator.generate(query)
+        result = await self.generator.generate(query)
         
-        assert "contradictory" in str(exc_info.value).lower() or \
-               "contradiction" in str(exc_info.value).lower()
+        # Should succeed (not raise error)
+        assert "meal_plan" in result
+        assert len(result["meal_plan"]) > 0
+        
+        # Should have a warning message
+        assert "warning" in result
+        assert result["warning"] is not None
+        assert len(result["warning"]) > 0
+        
+        # Warning should be user-friendly
+        assert "contradictory" not in result["warning"].lower() or "conflict" in result["warning"].lower()
 
 
 if __name__ == "__main__":

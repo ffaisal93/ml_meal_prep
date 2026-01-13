@@ -4,7 +4,7 @@ Meal plan generator - orchestrates query parsing and recipe generation
 import uuid
 import asyncio
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 from app.query_parser import QueryParser
 from app.recipe_service import RecipeService
 
@@ -15,6 +15,96 @@ class MealPlanGenerator:
     def __init__(self, strategy_mode: Optional[str] = None):
         self.query_parser = QueryParser()
         self.recipe_service = RecipeService(strategy_mode=strategy_mode)
+    
+    def _resolve_contradictions(self, parsed: Dict) -> Tuple[Dict, Optional[str]]:
+        """
+        Resolve contradictions by intelligently choosing which requirement to keep.
+        Returns (resolved_parsed, warning_message)
+        """
+        contradictions = parsed.get("contradictions", [])
+        if not contradictions:
+            return parsed, None
+        
+        # Priority order: dietary restrictions > preferences
+        # For known pairs, prefer the more restrictive/specific one
+        resolution_rules = {
+            ("vegan", "pescatarian"): "vegan",  # Vegan is more restrictive
+            ("vegan", "vegetarian"): "vegan",  # Vegan is more restrictive
+            ("keto", "high-carb"): "keto",  # Keto is more specific
+            ("low-carb", "high-carb"): "low-carb",  # Low-carb is more specific
+        }
+        
+        resolved = parsed.copy()
+        removed_items = []
+        kept_items = []
+        
+        for contradiction in contradictions:
+            # Parse contradiction string like "keto and high-carb"
+            parts = [p.strip() for p in contradiction.lower().split(" and ")]
+            if len(parts) != 2:
+                continue
+            
+            item1, item2 = parts[0], parts[1]
+            
+            # Find which one to keep based on rules
+            keep_item = None
+            remove_item = None
+            
+            # Check resolution rules
+            for (pair1, pair2), preferred in resolution_rules.items():
+                if (item1 == pair1.lower() and item2 == pair2.lower()) or \
+                   (item1 == pair2.lower() and item2 == pair1.lower()):
+                    keep_item = preferred.lower()
+                    remove_item = item2 if item1 == preferred.lower() else item1
+                    break
+            
+            # If no rule, prefer dietary restriction over preference
+            if not keep_item:
+                restrictions = [r.lower() for r in resolved.get("dietary_restrictions", [])]
+                preferences = [p.lower() for p in resolved.get("preferences", [])]
+                
+                if item1 in restrictions and item2 in preferences:
+                    keep_item = item1
+                    remove_item = item2
+                elif item2 in restrictions and item1 in preferences:
+                    keep_item = item2
+                    remove_item = item1
+                else:
+                    # Both in same category, keep first one
+                    keep_item = item1
+                    remove_item = item2
+            
+            # Remove from appropriate list
+            if remove_item:
+                # Remove from dietary_restrictions
+                if remove_item in [r.lower() for r in resolved.get("dietary_restrictions", [])]:
+                    resolved["dietary_restrictions"] = [
+                        r for r in resolved["dietary_restrictions"] 
+                        if r.lower() != remove_item
+                    ]
+                
+                # Remove from preferences
+                if remove_item in [p.lower() for p in resolved.get("preferences", [])]:
+                    resolved["preferences"] = [
+                        p for p in resolved["preferences"] 
+                        if p.lower() != remove_item
+                    ]
+                
+                removed_items.append(remove_item)
+                kept_items.append(keep_item)
+        
+        # Create natural language warning
+        if removed_items and kept_items:
+            removed_str = ", ".join(removed_items)
+            kept_str = ", ".join(kept_items)
+            warning = f"I noticed you requested both {removed_str} and {kept_str}, which conflict. I've created a {kept_str} meal plan for you."
+        else:
+            warning = "I've resolved some conflicting requirements in your request."
+        
+        # Clear contradictions since they're resolved
+        resolved["contradictions"] = []
+        
+        return resolved, warning
     
     async def generate(self, query: str) -> Dict:
         """
@@ -29,9 +119,9 @@ class MealPlanGenerator:
         # Parse the query
         parsed = self.query_parser.parse(query)
         
-        # Check for contradictions
-        if parsed.get("contradictions"):
-            raise ValueError(f"Contradictory requirements detected: {', '.join(parsed['contradictions'])}")
+        # Resolve contradictions automatically
+        resolved_parsed, warning_message = self._resolve_contradictions(parsed)
+        parsed = resolved_parsed
         
         # Validate duration
         duration_days = parsed["duration_days"]
@@ -122,7 +212,8 @@ class MealPlanGenerator:
             "duration_days": duration_days,
             "generated_at": datetime.now().isoformat(),
             "meal_plan": meal_plan,
-            "summary": summary
+            "summary": summary,
+            "warning": warning_message  # Add warning if contradictions were resolved
         }
         
         return response

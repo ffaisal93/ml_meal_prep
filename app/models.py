@@ -55,6 +55,7 @@ class MealPlanResponse(BaseModel):
     generated_at: str = Field(..., description="ISO timestamp")
     meal_plan: List[DayMealPlan]
     summary: MealPlanSummary
+    warning: Optional[str] = Field(None, description="User-friendly warning message if contradictions were resolved")
 
 
 class ErrorResponse(BaseModel):

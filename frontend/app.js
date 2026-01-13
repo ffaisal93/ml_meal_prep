@@ -167,6 +167,16 @@ function displayResults(data) {
         complianceTags.appendChild(tagEl);
     });
 
+    // Display warning if present
+    const warningBanner = document.getElementById('warningBanner');
+    const warningText = document.getElementById('warningText');
+    if (data.warning) {
+        warningText.textContent = data.warning;
+        warningBanner.style.display = 'flex';
+    } else {
+        warningBanner.style.display = 'none';
+    }
+
     // Display meal plan days
     const mealPlanDays = document.getElementById('mealPlanDays');
     mealPlanDays.innerHTML = '';
