@@ -7,6 +7,7 @@ from app.recipe_generation.base import RecipeGenerationStrategy
 from app.recipe_generation.llm_only import LLMOnlyStrategy
 from app.recipe_generation.rag_strategy import RAGStrategy
 from app.recipe_generation.hybrid_strategy import HybridStrategy
+from app.recipe_generation.fast_llm import FastLLMStrategy
 
 
 class RecipeStrategyFactory:
@@ -17,6 +18,7 @@ class RecipeStrategyFactory:
     - "llm_only": Pure LLM generation (baseline)
     - "rag": Edamam candidates + LLM refinement
     - "hybrid": Mix of RAG and LLM-only
+    - "fast_llm": Ultra-fast LLM generation with minimal detail
     """
     
     @staticmethod
@@ -26,7 +28,7 @@ class RecipeStrategyFactory:
         
         Args:
             mode: Strategy mode. If None, uses RECIPE_GENERATION_MODE from config.
-                  Options: "llm_only", "rag", "hybrid"
+                  Options: "llm_only", "rag", "hybrid", "fast_llm"
         
         Returns:
             RecipeGenerationStrategy instance
@@ -41,6 +43,8 @@ class RecipeStrategyFactory:
         elif mode == "hybrid":
             rag_ratio = getattr(settings, 'hybrid_rag_ratio', 0.7)
             return HybridStrategy(rag_ratio=rag_ratio)
+        elif mode == "fast_llm":
+            return FastLLMStrategy()
         else:
             # Default to LLM-only if unknown mode
             print(f"Unknown recipe generation mode: {mode}. Defaulting to 'llm_only'")
@@ -49,5 +53,5 @@ class RecipeStrategyFactory:
     @staticmethod
     def get_available_modes() -> list:
         """Get list of available strategy modes"""
-        return ["llm_only", "rag", "hybrid"]
+        return ["llm_only", "rag", "hybrid", "fast_llm"]
 

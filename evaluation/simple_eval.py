@@ -77,7 +77,7 @@ async def evaluate_diversity_custom(strategy="llm_only", days=3, query=None):
 
 async def main():
     """Run simple evaluation across all strategies"""
-    strategies = ["llm_only", "rag", "hybrid"]
+    strategies = ["llm_only", "rag", "hybrid", "fast_llm"]
     
     # Test configurations: (days, query, description)
     test_configs = [

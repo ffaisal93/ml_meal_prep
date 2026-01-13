@@ -142,7 +142,8 @@ function displayResults(data) {
         const modeLabels = {
             'llm_only': '🤖 LLM-Only',
             'rag': '🔍 RAG',
-            'hybrid': '⚡ Hybrid'
+            'hybrid': '⚡ Hybrid',
+            'fast_llm': '⚡ Fast LLM'
         };
         modeBadge.textContent = modeLabels[generationMode] || generationMode.toUpperCase();
         modeBadge.style.display = 'inline-block';
