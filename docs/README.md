@@ -19,6 +19,7 @@ Welcome to the Meal Planner API documentation! This directory contains all detai
 ### Database
 - **[Railway Database Setup](RAILWAY_DATABASE_SETUP.md)** - Database setup guide for Railway deployment
 - **[Connect Database to API](RAILWAY_CONNECT_DATABASE.md)** - How to connect PostgreSQL to your API service
+- **[Check Database](CHECK_DATABASE.md)** - How to verify if database is populated and working
 - **[Database Benefits](DATABASE_BENEFITS.md)** - How the database helps with user preferences and personalization
 
 ---
