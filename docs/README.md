@@ -1,53 +1,46 @@
 # Documentation Index
 
-Welcome to the Meal Planner API documentation! This directory contains all detailed guides and documentation.
+Complete documentation for the Meal Planner API.
 
-## 📚 Documentation Files
+## Getting Started
+- **[Quick Start Guide](QUICK_START.md)** - Get up and running in minutes
+- **[Testing Guide](TESTING.md)** - Local testing instructions
 
-### Getting Started
-- **[Quick Start Guide](QUICK_START.md)** - Get up and running in minutes ⚡
-- **[Testing Guide](TESTING.md)** - Step-by-step local testing instructions
+## Deployment
+- **[Deployment Guide](DEPLOYMENT.md)** - Railway and GitHub Pages deployment
+- **[Deployment Checklist](DEPLOYMENT_CHECKLIST.md)** - Pre-deployment verification steps
+- **[Update Deployment](UPDATE_DEPLOYMENT.md)** - Update deployed services
 
-### Deployment
-- **[Deployment Guide](DEPLOYMENT.md)** - Complete deployment instructions for all platforms
-- **[Update Deployment](UPDATE_DEPLOYMENT.md)** - How to update your deployment after making changes
+## Development
+- **[GitHub Setup Guide](GITHUB_SETUP.md)** - Push code to GitHub
+- **[Pre-Commit Checklist](PRE_COMMIT_CHECKLIST.md)** - Verify before committing
 
-### Development
-- **[GitHub Setup Guide](GITHUB_SETUP.md)** - How to push your code to GitHub
-- **[Pre-Commit Checklist](PRE_COMMIT_CHECKLIST.md)** - What to verify before committing to GitHub
+## Database
+- **[Railway Database Setup](RAILWAY_DATABASE_SETUP.md)** - PostgreSQL setup on Railway
+- **[Connect Database to API](RAILWAY_CONNECT_DATABASE.md)** - Connect database to API service
+- **[Check Database](CHECK_DATABASE.md)** - Verify database status
+- **[Database Benefits](DATABASE_BENEFITS.md)** - User preferences and personalization
 
-### Database
-- **[Railway Database Setup](RAILWAY_DATABASE_SETUP.md)** - Database setup guide for Railway deployment
-- **[Connect Database to API](RAILWAY_CONNECT_DATABASE.md)** - How to connect PostgreSQL to your API service
-- **[Check Database](CHECK_DATABASE.md)** - How to verify if database is populated and working
-- **[Database Benefits](DATABASE_BENEFITS.md)** - How the database helps with user preferences and personalization
+## Recipe Generation
+- **[Recipe Generation Strategies](RECIPE_GENERATION_STRATEGIES.md)** - LLM-only, RAG, Hybrid, and Fast LLM modes
+- **[Railway Recipe Strategies](RAILWAY_RECIPE_STRATEGIES.md)** - Strategy configuration on Railway
+- **[Diversity Strategy](DIVERSITY_STRATEGY.md)** - How variety hints ensure diverse meal plans
 
-### Recipe Generation
-- **[Recipe Generation Strategies](RECIPE_GENERATION_STRATEGIES.md)** - Complete guide to LLM-only, RAG, and Hybrid modes
-- **[Railway Recipe Strategies](RAILWAY_RECIPE_STRATEGIES.md)** - Quick Railway deployment guide for recipe strategies
+## Technical Details
+- **[Validation Flow](VALIDATION_FLOW.md)** - Query parsing and validation logic
 
-### Technical Details
-- **[Recipe Generation Strategies](RECIPE_GENERATION_STRATEGIES.md)** - Modular recipe generation: LLM-only, RAG, and Hybrid approaches
-- **[Validation Flow](VALIDATION_FLOW.md)** - How the system extracts and validates meal count, prep time, budget, etc. from prompts
+## Quick Links
 
----
+- **Main README**: Project overview and features
+- **API Docs**: Visit `/docs` endpoint when API is running
+- **Frontend README**: `frontend/README.md`
+- **Evaluation**: `evaluation/README.md`
 
-## 🚀 Quick Links
+## Recommended Reading Order
 
-- **Main README**: See root `README.md` for overview
-- **API Documentation**: Visit `/docs` endpoint when API is running
-- **Frontend README**: See `frontend/README.md`
-
----
-
-## 📖 Recommended Reading Order
-
-1. Start with **[Quick Start Guide](QUICK_START.md)** for fastest setup
-2. Read **[Testing Guide](TESTING.md)** to test locally
-3. Follow **[Deployment Guide](DEPLOYMENT.md)** to deploy
-4. Use **[Update Deployment](UPDATE_DEPLOYMENT.md)** when making changes
-
----
-
-**Need help?** Check the main `README.md` in the project root for overview and links.
+1. **[Quick Start Guide](QUICK_START.md)** - Setup and run locally
+2. **[Testing Guide](TESTING.md)** - Run tests
+3. **[Deployment Guide](DEPLOYMENT.md)** - Deploy to Railway/GitHub Pages
+4. **[Recipe Generation Strategies](RECIPE_GENERATION_STRATEGIES.md)** - Understand generation modes
+5. **[Update Deployment](UPDATE_DEPLOYMENT.md)** - Make changes to deployed services
 
