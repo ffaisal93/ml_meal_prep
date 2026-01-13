@@ -117,13 +117,12 @@ class RAGStrategy(RecipeGenerationStrategy):
         else:
             count = 10  # Default for shorter plans
         
-        noisy_preferences = list(preferences or [])
-        noisy_preferences.extend(self._get_query_noise(meal_type))
-
+        # Don't add query noise - it makes queries too specific and returns 0 results
+        # Just use the basic preferences
         candidates = await self.retriever.get_candidates(
             meal_type=meal_type,
             dietary=dietary or [],
-            preferences=noisy_preferences,
+            preferences=preferences or [],
             prep_time_max=prep_time_max,
             count=count
         )
@@ -283,16 +282,19 @@ Return JSON:
             recipe["source"] = "AI Generated (based on Edamam recipe)"
         recipe["meal_type"] = meal_type
         
-        # Validate nutritional values match candidate (±10% tolerance)
+        # Validate nutritional values match candidate (±20% tolerance)
+        # If LLM diverges too much, override with candidate values for accuracy
         if candidates and "nutritional_info" in recipe:
             candidate_nutrition = candidates[0].get("nutrition", {})
             for key in ["calories", "protein", "carbs", "fat"]:
                 if key in candidate_nutrition:
                     candidate_val = candidate_nutrition[key]
                     recipe_val = recipe["nutritional_info"].get(key, candidate_val)
-                    # Allow ±10% tolerance
-                    if abs(recipe_val - candidate_val) / candidate_val > 0.1:
-                        print(f"Warning: {key} value {recipe_val} differs significantly from candidate {candidate_val}")
+                    # If values differ by >20%, use candidate value (more trustworthy)
+                    if candidate_val > 0 and abs(recipe_val - candidate_val) / candidate_val > 0.2:
+                        recipe["nutritional_info"][key] = candidate_val
+                        # Optionally log this (comment out to reduce noise)
+                        # print(f"Corrected {key}: {recipe_val} → {candidate_val} (using Edamam data)")
         
         return recipe
     

@@ -1,59 +1,59 @@
-# Evaluation
+# Diversity Evaluation
 
-This folder documents the **evaluation strategy** for comparing the three recipe generation modes:
+Simple script to evaluate recipe diversity for the meal planner.
 
-- `llm_only`
-- `rag`
-- `hybrid`
+## Quick Evaluation
 
-The goals of the evaluation are:
+Run a simple test to compare all strategies:
 
-1. **Diversity**: How diverse are the generated recipes (by name) across multiple runs?
-2. **Stability**: How consistent are results between runs for the same configuration?
-3. **Mode Comparison**: How do the three strategies compare for 1/3/5/7-day plans?
+```bash
+cd /Users/faisal/Projects/ml_meal_prep
+python evaluation/simple_eval.py
+```
 
-## Frontend Evaluation UI
+This will:
+- Generate a 3-day meal plan for **each strategy** (LLM-Only, RAG, Hybrid)
+- Check for duplicate recipe names
+- Calculate diversity scores
+- Display a comparison table
 
-The primary evaluation experience is implemented in the GitHub Pages frontend:
+## What It Tests
 
-- Location: `ffaisal93.github.io/meal-planner`
-- Trigger: **"Run Diversity Evaluation"** button on the main page
-- Backend: Uses the existing `POST /api/generate-meal-plan` endpoint
+**Diversity Score** = `(Unique Meals / Total Meals) × 100`
 
-### What the UI Does
+Example:
+- 3-day plan = 9 total meals
+- If 9 are unique → 100% diversity ✅
+- If 8 are unique → 88.9% diversity (1 duplicate)
 
-For each combination of:
+## Expected Results
 
-- **Durations**: 1, 3, 5, 7 days  
-- **Modes**: `llm_only`, `rag`, `hybrid`
+- **90-100%**: Excellent diversity
+- **75-89%**: Good diversity  
+- **<75%**: Needs improvement
 
-The UI runs multiple meal plan generations (configurable in code, default is 3 runs per configuration), then:
+## Example Output
 
-1. Collects all `recipe_name` values across all days and meals  
-2. Normalizes names (lowercase + trim)  
-3. Computes:
-   - `total_meals` – total number of recipes generated
-   - `unique_meals` – number of unique recipe names
-   - `diversity_score` – `unique_meals / total_meals * 100` (percentage)
-4. Displays results in a table for easy comparison across modes and durations
+```
+DIVERSITY COMPARISON TABLE
+================================================================================
+Strategy        Days     Total      Unique     Diversity    Grade     
+--------------------------------------------------------------------------------
+llm_only        3        9          9          100.0%       ✅ Excellent
+rag             3        9          8          88.9%        👍 Good    
+hybrid          3        9          9          100.0%       ✅ Excellent
+================================================================================
 
-This evaluation is **client-driven** and does not require additional backend endpoints.
+🏆 Best Strategy: LLM_ONLY (100.0% diversity)
+```
 
-## How to Use
+## Customize
 
-1. Start the API (e.g., on Railway or locally)
-2. Open the GitHub Pages frontend (`meal-planner` site)
-3. Enter the API URL in the **API Endpoint** field
-4. Click **"Run Diversity Evaluation"**
-5. Wait for the table to populate with diversity scores
+Edit `simple_eval.py` to test different durations:
 
-## Notes
+```python
+# Change this line in main():
+days = 5  # Test with 5-day plans instead of 3
+```
 
-- Diversity is measured **only by recipe names**, which is a proxy for variety.
-- The evaluation is intentionally lightweight and designed for **developer inspection**, not formal statistical analysis.
-- For the take-home assignment, this demonstrates:
-  - Awareness of evaluation needs
-  - Ability to compare multiple strategies systematically
-  - Frontend + backend integration for practical analysis
-
-
+Simple, fast, and reliable! 🎯

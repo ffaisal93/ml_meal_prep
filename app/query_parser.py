@@ -52,6 +52,12 @@ class QueryParser:
         """Use OpenAI to parse query with structured output"""
         system_prompt = """You are a meal plan query parser. Extract structured information from natural language queries about meal plans.
 
+IMPORTANT RULES:
+- Handle typos charitably (e.g., "medetarian" → interpret as typo, NOT as "Mediterranean")
+- Only flag REAL contradictions (e.g., "vegan AND pescatarian" is contradictory)
+- Ignore negations like "not X" - these are NOT contradictions unless there's an actual conflict
+- If user says "not medetarian", don't treat it as any contradiction
+
 Extract:
 - duration_days: Number of days (1-7, default 3 if not specified)
 - meals_per_day: Number of meals per day (1-4, default 3 if not specified)
@@ -59,7 +65,7 @@ Extract:
 - dietary_restrictions: List of restrictions (vegan, vegetarian, gluten-free, dairy-free, nut-free, etc.)
 - preferences: List of preferences (high-protein, low-carb, keto, paleo, Mediterranean, etc.)
 - special_requirements: List of special requirements (budget-friendly, quick meals, under 15 minutes, etc.)
-- contradictions: List any contradictory requirements (e.g., "vegan pescatarian")
+- contradictions: List ONLY actual contradictory requirements. Do NOT include negations or typos.
 
 Return valid JSON only."""
         

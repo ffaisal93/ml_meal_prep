@@ -56,13 +56,17 @@ class RecipeRetriever:
         Returns:
             List of recipe candidate dictionaries
         """
-        # Build query string
-        query_parts = [meal_type]
-        if dietary:
-            query_parts.extend(dietary)
-        if preferences:
-            query_parts.extend(preferences)
-        query = " ".join(query_parts)
+        # Build query string - keep it simple
+        # Edamam works better with simple queries
+        # Use just meal type, or meal type + one main preference
+        if preferences and len(preferences) > 0:
+            # Use only the first preference to avoid overly specific queries
+            query = f"{meal_type} {preferences[0]}"
+        else:
+            query = meal_type
+        
+        # Add dietary restrictions separately via health labels
+        # Don't add them to the query string as it makes it too specific
         
         # Build parameters
         params = {
