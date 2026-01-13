@@ -155,6 +155,54 @@ If you just need to update the Railway API URL in the frontend:
 
 ---
 
+## ⚙️ Updating Environment Variables (Strategy Configuration)
+
+### Changing Recipe Generation Strategy
+
+If you want to switch between `llm_only`, `rag`, or `hybrid` modes:
+
+1. **Go to Railway Dashboard**
+   - Select your project → Your service → **Variables** tab
+
+2. **Update Strategy Mode**
+   ```
+   RECIPE_GENERATION_MODE=rag  # Change to desired mode
+   ```
+
+3. **If Switching to RAG/Hybrid, Add Edamam Credentials**
+   ```
+   EDAMAM_APP_ID=your_app_id
+   EDAMAM_APP_KEY=your_app_key
+   EDAMAM_USER_ID=your_user_id  # Optional
+   ```
+
+4. **If Using Hybrid Mode, Set Ratio**
+   ```
+   HYBRID_RAG_RATIO=0.7  # 70% RAG, 30% LLM-only
+   ```
+
+5. **Railway Auto-Redeploys**
+   - Changes take effect immediately
+   - No code changes needed!
+
+### Removing Edamam Credentials (Switch to LLM-Only)
+
+1. **Update mode:**
+   ```
+   RECIPE_GENERATION_MODE=llm_only
+   ```
+
+2. **Remove Edamam variables** (optional, but recommended):
+   - Delete `EDAMAM_APP_ID`
+   - Delete `EDAMAM_APP_KEY`
+   - Delete `EDAMAM_USER_ID`
+
+3. **Railway auto-redeploys**
+
+**Note:** The API will work fine without Edamam credentials if `RECIPE_GENERATION_MODE=llm_only`.
+
+---
+
 ## 🔍 Troubleshooting Updates
 
 ### Railway Not Updating

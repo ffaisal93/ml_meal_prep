@@ -11,11 +11,11 @@ from app.recipe_service import RecipeService
 class MealPlanGenerator:
     """Generate complete meal plans based on parsed queries"""
     
-    def __init__(self):
+    def __init__(self, strategy_mode: Optional[str] = None):
         self.query_parser = QueryParser()
-        self.recipe_service = RecipeService()
+        self.recipe_service = RecipeService(strategy_mode=strategy_mode)
     
-    def generate(self, query: str) -> Dict:
+    async def generate(self, query: str) -> Dict:
         """
         Generate a complete meal plan from a natural language query
         
@@ -60,13 +60,14 @@ class MealPlanGenerator:
             meals = []
             
             for meal_type in meal_types:
-                recipe = self.recipe_service.generate_recipe(
+                recipe = await self.recipe_service.generate_recipe(
                     meal_type=meal_type,
                     dietary_restrictions=parsed["dietary_restrictions"],
                     preferences=parsed["preferences"],
                     special_requirements=parsed["special_requirements"],
                     day=day,
-                    prep_time_max=parsed.get("prep_time_max")  # Pass prep time constraint
+                    prep_time_max=parsed.get("prep_time_max"),  # Pass prep time constraint
+                    duration_days=duration_days  # Pass duration for candidate count calculation
                 )
                 # Ensure meal_type is included in the recipe
                 recipe["meal_type"] = meal_type

@@ -44,7 +44,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize meal generator
+# Initialize meal generator (will use config default)
 meal_generator = MealPlanGenerator()
 query_parser = QueryParser()
 
@@ -141,6 +141,10 @@ async def generate_meal_plan(request: Request, request_body: MealPlanRequest):
     - Preferences (high-protein, low-carb, etc.)
     - Special requirements (budget-friendly, quick meals, etc.)
     
+    Optional Parameters:
+    - generation_mode: Recipe generation strategy ("llm_only", "rag", or "hybrid")
+      If not provided, uses server default from RECIPE_GENERATION_MODE config.
+    
     Example queries:
     - "Create a 5-day vegetarian meal plan with high protein"
     - "I need a 3-day gluten-free meal plan, exclude dairy and nuts"
@@ -172,8 +176,23 @@ async def generate_meal_plan(request: Request, request_body: MealPlanRequest):
         # Parse query to extract preferences (for storage)
         parsed = query_parser.parse(request_body.query)
         
-        # Generate meal plan
-        meal_plan = meal_generator.generate(request_body.query)
+        # Use request-specific mode if provided, otherwise use default generator
+        generation_mode = request_body.generation_mode
+        if generation_mode:
+            # Validate mode
+            valid_modes = ["llm_only", "rag", "hybrid"]
+            if generation_mode not in valid_modes:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Invalid generation_mode: {generation_mode}. Must be one of: {', '.join(valid_modes)}"
+                )
+            # Create a temporary generator with the requested mode
+            from app.meal_generator import MealPlanGenerator
+            temp_generator = MealPlanGenerator(strategy_mode=generation_mode)
+            meal_plan = await temp_generator.generate(request_body.query)
+        else:
+            # Use default generator (uses config setting)
+            meal_plan = await meal_generator.generate(request_body.query)
         
         # Save user preference if user_id is provided
         if request_body.user_id:

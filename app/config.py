@@ -24,6 +24,15 @@ class Settings(BaseSettings):
     persistent_volume_path: Optional[str] = Field(None, env="PERSISTENT_VOLUME_PATH")
     db_path: str = "meal_planner.db"  # Default SQLite path
     
+    # Recipe generation strategy configuration
+    recipe_generation_mode: str = Field("llm_only", env="RECIPE_GENERATION_MODE")  # Options: "llm_only", "rag", "hybrid"
+    hybrid_rag_ratio: float = Field(0.7, env="HYBRID_RAG_RATIO")  # For hybrid mode: ratio of RAG recipes (0.0 to 1.0)
+    
+    # Edamam API configuration (required for RAG and hybrid modes)
+    edamam_app_id: Optional[str] = Field(None, env="EDAMAM_APP_ID")
+    edamam_app_key: Optional[str] = Field(None, env="EDAMAM_APP_KEY")
+    edamam_user_id: Optional[str] = Field(None, env="EDAMAM_USER_ID")
+    
     @property
     def effective_port(self) -> int:
         """Get the effective port (Railway's PORT or api_port)"""

@@ -88,11 +88,28 @@ This gives you:
    railway up
    ```
 
-4. **Set environment variable:**
+4. **Set environment variables:**
    - Go to https://railway.app/dashboard
    - Select your project
    - Go to Variables tab
-   - Add: `OPENAI_API_KEY` = `your_key_here`
+   - Add required variables:
+     ```
+     OPENAI_API_KEY=your_openai_key_here
+     ```
+   - **Optional - Recipe Generation Strategy:**
+     ```
+     RECIPE_GENERATION_MODE=llm_only  # Options: "llm_only", "rag", "hybrid"
+     ```
+   - **If using RAG or Hybrid mode, also add:**
+     ```
+     EDAMAM_APP_ID=your_edamam_app_id
+     EDAMAM_APP_KEY=your_edamam_app_key
+     EDAMAM_USER_ID=your_user_id  # Optional, defaults to App ID
+     ```
+   - **If using Hybrid mode, also add:**
+     ```
+     HYBRID_RAG_RATIO=0.7  # Ratio of RAG recipes (0.0 to 1.0)
+     ```
 
 5. **Get your URL:**
    - Railway provides a public URL automatically
@@ -132,6 +149,8 @@ This gives you:
    - Click "Environment" tab
    - Add: `OPENAI_API_KEY` = `your_key_here`
    - Add: `API_PORT` = `$PORT` (Render sets this automatically)
+   - **Optional:** Add `RECIPE_GENERATION_MODE` = `rag` (or `llm_only`, `hybrid`)
+   - **If using RAG/hybrid:** Add Edamam credentials (`EDAMAM_APP_ID`, `EDAMAM_APP_KEY`)
 
 5. **Deploy:**
    - Click "Create Web Service"
@@ -176,6 +195,10 @@ This gives you:
 4. **Set secrets:**
    ```bash
    fly secrets set OPENAI_API_KEY=your_key_here
+   # Optional: Set recipe generation mode
+   fly secrets set RECIPE_GENERATION_MODE=rag
+   # If using RAG/hybrid, also set Edamam credentials
+   fly secrets set EDAMAM_APP_ID=your_app_id EDAMAM_APP_KEY=your_app_key
    ```
 
 5. **Deploy:**
@@ -199,7 +222,13 @@ This gives you:
 1. **Create .env file:**
    ```bash
    cd ml_meal_prep
-   echo "OPENAI_API_KEY=your_key_here" > .env
+   cat > .env << EOF
+   OPENAI_API_KEY=your_key_here
+   RECIPE_GENERATION_MODE=llm_only
+   # If using RAG/hybrid, uncomment and add:
+   # EDAMAM_APP_ID=your_app_id
+   # EDAMAM_APP_KEY=your_app_key
+   EOF
    ```
 
 2. **Build and run:**
@@ -238,6 +267,10 @@ This gives you:
 4. **Set config:**
    ```bash
    heroku config:set OPENAI_API_KEY=your_key_here
+   # Optional: Set recipe generation mode
+   heroku config:set RECIPE_GENERATION_MODE=rag
+   # If using RAG/hybrid, also set Edamam credentials
+   heroku config:set EDAMAM_APP_ID=your_app_id EDAMAM_APP_KEY=your_app_key
    ```
 
 5. **Deploy:**
@@ -262,6 +295,11 @@ All platforms require:
 | `API_HOST` | No | `0.0.0.0` | Host to bind to |
 | `API_PORT` | No | `8000` | Port (use `$PORT` on cloud platforms) |
 | `CACHE_TTL_SECONDS` | No | `3600` | Cache TTL in seconds |
+| `RECIPE_GENERATION_MODE` | No | `llm_only` | Recipe generation strategy: `"llm_only"`, `"rag"`, or `"hybrid"` |
+| `HYBRID_RAG_RATIO` | No | `0.7` | For hybrid mode: ratio of RAG recipes (0.0 to 1.0) |
+| `EDAMAM_APP_ID` | Conditional | - | Required for RAG/hybrid modes: Edamam Application ID |
+| `EDAMAM_APP_KEY` | Conditional | - | Required for RAG/hybrid modes: Edamam Application Key |
+| `EDAMAM_USER_ID` | No | App ID | Optional: Edamam User ID (defaults to App ID) |
 
 ---
 

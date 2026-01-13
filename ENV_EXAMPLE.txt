@@ -24,3 +24,23 @@ RATE_LIMIT_SYSTEM_MAX_RPS=50
 # PERSISTENT_VOLUME_PATH=/data
 # DB_PATH=meal_planner.db
 
+# Recipe Generation Strategy Configuration
+# Options: "llm_only", "rag", "hybrid"
+# - llm_only: Pure LLM generation (baseline, no external API needed)
+# - rag: Edamam candidates + LLM refinement (requires Edamam credentials)
+# - hybrid: Mix of RAG and LLM-only (requires Edamam credentials)
+RECIPE_GENERATION_MODE=llm_only
+
+# Hybrid Strategy Configuration (only used when RECIPE_GENERATION_MODE=hybrid)
+# Ratio of RAG recipes (0.0 to 1.0)
+# Example: 0.7 means 70% RAG, 30% LLM-only
+HYBRID_RAG_RATIO=0.7
+
+# Edamam Recipe API Configuration (required for RAG and hybrid modes)
+# Get credentials from: https://developer.edamam.com/admin/applications
+# Create a "Recipe Search API" application
+EDAMAM_APP_ID=your_edamam_app_id_here
+EDAMAM_APP_KEY=your_edamam_app_key_here
+# Optional: User ID (defaults to App ID if not provided)
+# EDAMAM_USER_ID=your_user_id_here
+

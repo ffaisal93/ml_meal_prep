@@ -10,6 +10,7 @@ class MealPlanRequest(BaseModel):
     """Request model for meal plan generation"""
     query: str = Field(..., description="Natural language meal plan request", min_length=1)
     user_id: Optional[str] = Field(None, description="Optional user ID for preference tracking")
+    generation_mode: Optional[str] = Field(None, description="Recipe generation mode: 'llm_only', 'rag', or 'hybrid'. If not provided, uses server default.")
 
 
 class NutritionalInfo(BaseModel):

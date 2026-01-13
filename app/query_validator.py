@@ -162,7 +162,8 @@ class QueryValidator:
     def _validate_contradictions(self, query: str, parsed: Dict) -> ValidationResult:
         """Check for contradictory requirements"""
         restrictions = set(parsed.get('dietary_restrictions', []))
-        contradictions = parsed.get('contradictions', [])
+        preferences = set(parsed.get('preferences', []))
+        contradictions = []
         
         # Known contradictions
         known_contradictions = [
@@ -172,15 +173,46 @@ class QueryValidator:
             ('low-carb', 'high-carb'),
         ]
         
-        for restriction in restrictions:
+        # Check restrictions against restrictions and preferences
+        all_requirements = restrictions.union(preferences)
+        
+        for restriction in all_requirements:
             for known_pair in known_contradictions:
                 if restriction in known_pair:
                     other = known_pair[1] if known_pair[0] == restriction else known_pair[0]
-                    if other in restrictions or other in parsed.get('preferences', []):
-                        contradictions.append(f"{restriction} and {other}")
+                    if other in all_requirements:
+                        # Format: "restriction and other" to show both
+                        contradiction_str = f"{restriction} and {other}"
+                        if contradiction_str not in contradictions:
+                            contradictions.append(contradiction_str)
+        
+        # Also check LLM-detected contradictions (might be in different format)
+        llm_contradictions = parsed.get('contradictions', [])
+        if isinstance(llm_contradictions, str):
+            llm_contradictions = [llm_contradictions]
+        
+        # Normalize LLM contradictions - if they're single items, try to find the pair
+        for llm_contradiction in llm_contradictions:
+            if isinstance(llm_contradiction, str):
+                # If LLM just says "high-carb", check if we have the pair
+                for known_pair in known_contradictions:
+                    if llm_contradiction in known_pair:
+                        other = known_pair[1] if known_pair[0] == llm_contradiction else known_pair[0]
+                        if other in all_requirements:
+                            contradiction_str = f"{llm_contradiction} and {other}"
+                            if contradiction_str not in contradictions:
+                                contradictions.append(contradiction_str)
+                        else:
+                            # If we can't find the pair, keep the original
+                            if llm_contradiction not in contradictions:
+                                contradictions.append(llm_contradiction)
+                    else:
+                        # Not a known pair, keep as is
+                        if llm_contradiction not in contradictions:
+                            contradictions.append(llm_contradiction)
         
         if contradictions:
-            parsed['contradictions'] = list(set(contradictions))
+            parsed['contradictions'] = contradictions
             return ValidationResult(
                 is_valid=False,
                 message=f"Contradictory requirements detected: {', '.join(contradictions)}"

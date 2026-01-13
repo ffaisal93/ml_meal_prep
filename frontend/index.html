@@ -28,6 +28,21 @@
                 </div>
 
                 <div class="input-group">
+                    <label for="generationMode">Recipe Generation Mode:</label>
+                    <select id="generationMode" class="mode-select" title="Select recipe generation strategy">
+                        <option value="">Default (Server Setting)</option>
+                        <option value="llm_only" title="Pure AI generation - Maximum creativity">LLM-Only (Pure AI)</option>
+                        <option value="rag" title="Real recipes from Edamam API + AI refinement - Best nutrition accuracy">RAG (Real Recipes + AI)</option>
+                        <option value="hybrid" title="Mix of RAG and LLM-only - Balanced approach">Hybrid (Mix of Both)</option>
+                    </select>
+                    <small>
+                        <strong>LLM-Only:</strong> Pure AI creativity | 
+                        <strong>RAG:</strong> Real recipes + AI (requires Edamam API) | 
+                        <strong>Hybrid:</strong> Mix of both approaches
+                    </small>
+                </div>
+
+                <div class="input-group">
                     <label for="queryInput">What kind of meal plan do you need?</label>
                     <textarea 
                         id="queryInput" 
@@ -64,7 +79,10 @@
 
             <div id="results" class="results-section" style="display: none;">
                 <div class="summary-card">
-                    <h2>📊 Meal Plan Summary</h2>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2>📊 Meal Plan Summary</h2>
+                        <span id="generationModeBadge" class="mode-badge" style="display: none;"></span>
+                    </div>
                     <div class="summary-grid">
                         <div class="summary-item">
                             <span class="summary-label">Duration</span>

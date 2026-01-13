@@ -22,6 +22,14 @@ Welcome to the Meal Planner API documentation! This directory contains all detai
 - **[Check Database](CHECK_DATABASE.md)** - How to verify if database is populated and working
 - **[Database Benefits](DATABASE_BENEFITS.md)** - How the database helps with user preferences and personalization
 
+### Recipe Generation
+- **[Recipe Generation Strategies](RECIPE_GENERATION_STRATEGIES.md)** - Complete guide to LLM-only, RAG, and Hybrid modes
+- **[Railway Recipe Strategies](RAILWAY_RECIPE_STRATEGIES.md)** - Quick Railway deployment guide for recipe strategies
+
+### Technical Details
+- **[Recipe Generation Strategies](RECIPE_GENERATION_STRATEGIES.md)** - Modular recipe generation: LLM-only, RAG, and Hybrid approaches
+- **[Validation Flow](VALIDATION_FLOW.md)** - How the system extracts and validates meal count, prep time, budget, etc. from prompts
+
 ---
 
 ## 🚀 Quick Links

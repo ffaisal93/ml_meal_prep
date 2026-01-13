@@ -39,12 +39,20 @@ async function generateMealPlan() {
 
     try {
         const apiUrl = getApiUrl();
+        const generationMode = document.getElementById('generationMode').value;
+        
+        // Build request body
+        const requestBody = { query };
+        if (generationMode) {
+            requestBody.generation_mode = generationMode;
+        }
+        
         const response = await fetch(`${apiUrl}/api/generate-meal-plan`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ query }),
+            body: JSON.stringify(requestBody),
         });
 
         if (!response.ok) {
@@ -70,6 +78,21 @@ async function generateMealPlan() {
 function displayResults(data) {
     const results = document.getElementById('results');
     results.style.display = 'block';
+
+    // Show generation mode badge if a mode was selected
+    const generationMode = document.getElementById('generationMode').value;
+    const modeBadge = document.getElementById('generationModeBadge');
+    if (generationMode) {
+        const modeLabels = {
+            'llm_only': '🤖 LLM-Only',
+            'rag': '🔍 RAG',
+            'hybrid': '⚡ Hybrid'
+        };
+        modeBadge.textContent = modeLabels[generationMode] || generationMode.toUpperCase();
+        modeBadge.style.display = 'inline-block';
+    } else {
+        modeBadge.style.display = 'none';
+    }
 
     // Update summary
     document.getElementById('summaryDuration').textContent = `${data.duration_days} days`;
