@@ -2,14 +2,14 @@
 
 ## The Challenge
 
-When generating multiple meals, we need to ensure recipe variety without:
+When generating multiple meals sequentially, we need to ensure recipe variety without:
 - Complex tracking systems
 - Performance overhead
 - Conflicts with user preferences
 
 ## Solution: Variety Hints
 
-**Design Choice**: Each recipe gets a subtle variety hint based on the day number. This guides the LLM to generate different recipes naturally.
+**Design Choice**: Each recipe gets a subtle variety hint based on the day number. This guides the LLM to generate different recipes naturally, even in sequential generation.
 
 ### Two-Mode Strategy
 
@@ -78,13 +78,11 @@ def _get_variety_hint(day, meal_type, preferences, exclusions):
 
 ### Additional Diversity Mechanisms
 
-**1. Thread-Safe Recipe Tracking**
+**1. Recipe Tracking**
 ```python
-self._lock = asyncio.Lock()  # Prevent race conditions
-self.used_recipes = set()     # Track generated recipes
+self.used_recipes = set()  # Track generated recipes
 
-async with self._lock:
-    self.used_recipes.add(recipe_name)
+self.used_recipes.add(recipe_name)  # Simple tracking, no race conditions in sequential
 ```
 
 **2. High Temperature**
@@ -93,8 +91,8 @@ temperature=0.9  # Increases LLM creativity and variation
 ```
 
 **3. Batch Generation**
-- llm_only: Generates all meals for a day together (more coherent)
-- fast_llm: Generates entire plan in one call (adaptive detail)
+- llm_only: Generates all meals for a day together (more coherent, fewer API calls)
+- fast_llm: Generates entire plan in one call (fastest, most efficient)
 
 ## Results
 
@@ -111,7 +109,7 @@ temperature=0.9  # Increases LLM creativity and variation
 
 **Simple**: Just a hint string in the prompt, no complex algorithms
 
-**Fast**: Zero performance overhead, no additional API calls
+**Efficient**: Works with sequential generation, no synchronization needed
 
 **Respects constraints**: 
 - Honors user cuisine preferences
@@ -138,28 +136,30 @@ System extracts these keywords and filters them from variety hints.
 
 ## Alternative Approaches Considered
 
-**Rejected: Sequential generation with tracking**
-- Pro: Perfect diversity
-- Con: Much slower (no parallelization)
-- Con: Doesn't scale for large plans
+**Rejected: Parallel generation with tracking**
+- Pro: Could generate all days simultaneously
+- Con: Race conditions require complex locking
+- Con: Actually slower in practice (API rate limits, complexity)
+- Con: Harder to maintain diversity
 
 **Rejected: Post-generation deduplication**
 - Pro: Guaranteed uniqueness
 - Con: Wastes API calls generating duplicates
 - Con: Regeneration adds latency
 
-**Chosen: Variety hints + parallel generation**
-- Pro: Fast (parallel)
+**Chosen: Sequential + batch generation with variety hints**
+- Pro: Simple, reliable, no race conditions
+- Pro: Batch calls reduce API overhead (3-21 calls → 7 calls for 7-day plan)
 - Pro: Good diversity (hints guide variation)
-- Pro: Simple (no complex state management)
-- Con: Not perfect diversity (acceptable tradeoff)
+- Pro: Easy to reason about and debug
+- Con: Days generated sequentially (acceptable - still fast)
 
 ## Summary
 
 This diversity strategy is a **bonus feature** implementing:
 - Recipe diversity algorithm (variety hints)
 - Exclusion filtering
-- Thread-safe tracking
-- Cost optimization (no redundant API calls)
+- Simple recipe tracking
+- Cost optimization (batch generation, no redundant API calls)
 
-Achieves 80-100% diversity with zero performance penalty.
+Achieves 80-100% diversity with sequential generation and batch optimization.

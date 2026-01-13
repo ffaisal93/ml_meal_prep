@@ -27,7 +27,7 @@ class LLMOnlyStrategy(RecipeGenerationStrategy):
     
     def _get_variety_hint(self, day: int, meal_type: str, preferences: List[str], exclusions: List[str] = None) -> str:
         """
-        Generate variety hints based on day to ensure diversity in parallel generation.
+        Generate variety hints based on day to ensure diversity across sequential days.
         Uses simple variation techniques instead of forcing specific cuisines.
         Respects exclusions to avoid suggesting excluded cuisines.
         """
@@ -75,7 +75,7 @@ class LLMOnlyStrategy(RecipeGenerationStrategy):
             if not filtered_options:
                 filtered_options = ["grain-based", "protein-focused", "veggie-forward"]
             
-            # Randomize but use day as seed for consistency across parallel calls
+            # Randomize but use day as seed for consistent variety across days
             random.seed(day * 100 + hash(meal_type) % 100)
             hint = random.choice(filtered_options)
         
@@ -235,7 +235,7 @@ Make each recipe different, with specific quantities and realistic nutrition."""
             used_for_meal_type = [name for name in self.used_recipes if meal_type.lower() in name.lower()]
             used_for_meal_type = used_for_meal_type[:10]
         
-        # Simple diversity: vary by day to ensure different recipes in parallel calls
+        # Simple diversity: vary by day to ensure different recipes across days
         # Get variety hint with exclusions
         exclusions = kwargs.get('exclusions', [])
         variety_hint = self._get_variety_hint(day, meal_type, preferences, exclusions)

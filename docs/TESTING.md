@@ -201,7 +201,7 @@ pytest tests/ --cov=app --cov-report=html
 
 - **`tests/test_query_validator.py`**: Tests for query validation (duration limits, contradictions, meal count)
 - **`tests/test_edge_cases.py`**: Tests for assignment edge cases (all 5 test cases from requirements)
-- **`tests/test_meal_generator.py`**: Tests for meal plan generation (parallel execution, summary calculation)
+- **`tests/test_meal_generator.py`**: Tests for meal plan generation (batch generation, diversity, summary calculation)
 
 ### What's Tested
 
@@ -210,7 +210,7 @@ pytest tests/ --cov=app --cov-report=html
 - ✅ Contradiction detection
 - ✅ Edge cases from assignment requirements
 - ✅ Meal plan generation logic
-- ✅ Parallel generation performance
+- ✅ Batch generation performance and diversity
 - ✅ Error handling
 
 ### Test Examples

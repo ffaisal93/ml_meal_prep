@@ -1,6 +1,6 @@
 """
-Manual performance test to measure parallel generation speed improvement.
-Run this test to see the actual speed-up from parallel generation across days.
+Manual performance test to measure batch generation speed and diversity.
+Tests the efficiency of sequential generation with batch optimization.
 
 Usage:
     python -m pytest tests/test_parallel_speed.py -v -s
@@ -16,12 +16,12 @@ from app.meal_generator import MealPlanGenerator
 async def test_parallel_speed_7_day():
     """
     Performance test: Generate a 7-day meal plan and measure speed + diversity.
-    This demonstrates the parallel generation optimization.
+    This demonstrates batch generation (all meals for a day in one call).
     """
     generator = MealPlanGenerator(strategy_mode="llm")
     
     print("\n" + "="*60)
-    print("Testing parallel generation across days AND meals...")
+    print("Testing batch generation (7 API calls for 7 days)...")
     print("Generating 7-day meal plan (21 recipes total)...")
     print("="*60 + "\n")
     
@@ -85,7 +85,7 @@ async def test_parallel_speed_3_day():
 
 if __name__ == "__main__":
     # Allow running directly for quick testing
-    print("Running parallel speed tests...\n")
+    print("Running batch generation performance tests...\n")
     asyncio.run(test_parallel_speed_3_day())
     print("\n")
     asyncio.run(test_parallel_speed_7_day())

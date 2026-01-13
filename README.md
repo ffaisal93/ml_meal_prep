@@ -9,6 +9,7 @@ A REST API that generates personalized meal plans from natural language queries.
 - Detailed recipes with ingredients, instructions, and nutrition info
 - Dietary restriction support (vegan, gluten-free, etc.)
 - Smart query parsing with contradiction detection
+- Sequential generation with batch optimization
 
 **Design Choices (Bonus Features Implemented):**
 - **Recipe Diversity Algorithm**: Tracks used recipes, ensures <10% repetition across days
