@@ -54,44 +54,32 @@ class MealPlanGenerator:
         # Ensure we don't exceed the requested meal count
         meal_types = meal_types[:meals_per_day]
         
-        # Generate all days in parallel (not just meals within a day)
-        async def generate_day_meals(day: int) -> Dict:
-            """Generate all meals for a single day"""
+        # Generate everything SEQUENTIALLY - simple and reliable
+        meal_plan = []
+        for day in range(1, duration_days + 1):
             current_date = start_date + timedelta(days=day - 1)
+            meals = []
             
-            async def generate_meal_with_type(meal_type: str) -> Dict:
-                """Helper to generate a recipe and ensure meal_type is set"""
+            # Generate each meal one at a time
+            for meal_type in meal_types:
                 recipe = await self.recipe_service.generate_recipe(
                     meal_type=meal_type,
                     dietary_restrictions=parsed["dietary_restrictions"],
                     preferences=parsed["preferences"],
                     special_requirements=parsed["special_requirements"],
                     day=day,
-                    prep_time_max=parsed.get("prep_time_max"),  # Pass prep time constraint
-                    duration_days=duration_days,  # Pass duration for candidate count calculation
-                    exclusions=parsed.get("exclusions", [])  # Pass exclusions
+                    prep_time_max=parsed.get("prep_time_max"),
+                    duration_days=duration_days,
+                    exclusions=parsed.get("exclusions", [])
                 )
-                # Ensure meal_type is included in the recipe
                 recipe["meal_type"] = meal_type
-                return recipe
+                meals.append(recipe)
             
-            # Generate all meals concurrently for this day
-            meals = await asyncio.gather(*[
-                generate_meal_with_type(meal_type) 
-                for meal_type in meal_types
-            ])
-            
-            return {
+            meal_plan.append({
                 "day": day,
                 "date": current_date.isoformat(),
-                "meals": list(meals)  # Ensure it's a list
-            }
-        
-        # Generate ALL days in parallel
-        meal_plan = await asyncio.gather(*[
-            generate_day_meals(day) 
-            for day in range(1, duration_days + 1)
-        ])
+                "meals": meals
+            })
         
         # Calculate summary
         summary = self._calculate_summary(meal_plan, parsed)
