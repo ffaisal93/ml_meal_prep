@@ -85,6 +85,126 @@ class LLMOnlyStrategy(RecipeGenerationStrategy):
         """Reset used recipes tracker"""
         self.used_recipes.clear()
     
+    async def generate_day_meals(
+        self,
+        day: int,
+        meal_types: List[str],
+        dietary_restrictions: List[str],
+        preferences: List[str],
+        special_requirements: List[str],
+        prep_time_max: Optional[int] = None,
+        exclusions: List[str] = None
+    ) -> List[Dict]:
+        """
+        Generate ALL meals for a single day in ONE API call
+        Much faster and cheaper than generating meals individually
+        """
+        exclusions = exclusions or []
+        
+        # Build requirements string
+        requirements = []
+        if dietary_restrictions:
+            requirements.append(f"Dietary: {', '.join(dietary_restrictions)}")
+        if preferences:
+            requirements.append(f"Preferences: {', '.join(preferences)}")
+        if special_requirements:
+            requirements.append(f"Special: {', '.join(special_requirements)}")
+        requirements_str = "\n".join(requirements) if requirements else "No specific restrictions"
+        
+        # Get variety hint
+        variety_hint = self._get_variety_hint(day, meal_types[0], preferences, exclusions)
+        diversity_constraint = f"\n\nVariety: {variety_hint}. Be unique."
+        if exclusions:
+            diversity_constraint += f" NOT {', '.join(exclusions[:2])}."
+        
+        prep_time_constraint = f"\n- Must be {prep_time_max} minutes or less" if prep_time_max else ""
+        
+        system_prompt = """You are a professional chef. Generate realistic, creative recipes with specific ingredients and accurate nutrition. Make each recipe unique and diverse. Return valid JSON only."""
+        
+        meal_list = ", ".join(meal_types)
+        user_prompt = f"""Create {len(meal_types)} recipes for day {day}: {meal_list}.
+
+Requirements:
+{requirements_str}{prep_time_constraint}{diversity_constraint}
+
+Return JSON with a "recipes" array:
+{{
+  "recipes": [
+    {{
+      "recipe_name": "Creative name",
+      "description": "Brief description",
+      "ingredients": ["2 cups oats", "1 tbsp honey"],
+      "nutritional_info": {{"calories": 400, "protein": 20.0, "carbs": 45.0, "fat": 12.0}},
+      "preparation_time": "20 mins",
+      "instructions": "Clear step-by-step precise cooking instructions",
+      "source": "AI Generated"
+    }}
+  ]
+}}
+
+Make each recipe different, with specific quantities and realistic nutrition."""
+        
+        try:
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.9
+            )
+            
+            result = json.loads(response.choices[0].message.content)
+            
+            # Handle different response formats
+            if "recipes" in result:
+                recipes = result["recipes"]
+            elif "meals" in result:
+                recipes = result["meals"]
+            elif isinstance(result, list):
+                recipes = result
+            else:
+                recipes = [result]
+            
+            # Validate and assign meal types
+            validated_recipes = []
+            for i, recipe in enumerate(recipes[:len(meal_types)]):
+                recipe = self._validate_recipe(recipe, meal_types[i])
+                recipe["meal_type"] = meal_types[i]
+                validated_recipes.append(recipe)
+                
+                # Track for diversity
+                recipe_name = recipe.get("recipe_name", "").lower()
+                if recipe_name:
+                    async with self._lock:
+                        self.used_recipes.add(recipe_name)
+            
+            # If we didn't get enough recipes, generate fallbacks
+            while len(validated_recipes) < len(meal_types):
+                fallback = self._generate_fallback_recipe(meal_types[len(validated_recipes)], dietary_restrictions)
+                fallback["meal_type"] = meal_types[len(validated_recipes)]
+                validated_recipes.append(fallback)
+            
+            return validated_recipes
+            
+        except Exception as e:
+            print(f"Batch meal generation failed: {e}, falling back to individual generation")
+            # Fallback to individual generation
+            recipes = []
+            for meal_type in meal_types:
+                recipe = await self.generate_recipe(
+                    meal_type=meal_type,
+                    dietary_restrictions=dietary_restrictions,
+                    preferences=preferences,
+                    special_requirements=special_requirements,
+                    day=day,
+                    prep_time_max=prep_time_max,
+                    exclusions=exclusions
+                )
+                recipes.append(recipe)
+            return recipes
+    
     async def generate_recipe(
         self,
         meal_type: str,

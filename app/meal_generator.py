@@ -54,26 +54,38 @@ class MealPlanGenerator:
         # Ensure we don't exceed the requested meal count
         meal_types = meal_types[:meals_per_day]
         
-        # Generate everything SEQUENTIALLY - simple and reliable
+        # Generate all meals for each day in ONE API call - much faster!
         meal_plan = []
         for day in range(1, duration_days + 1):
             current_date = start_date + timedelta(days=day - 1)
-            meals = []
             
-            # Generate each meal one at a time
-            for meal_type in meal_types:
-                recipe = await self.recipe_service.generate_recipe(
-                    meal_type=meal_type,
+            # Try batch generation if strategy supports it
+            if hasattr(self.recipe_service.strategy, 'generate_day_meals'):
+                meals = await self.recipe_service.strategy.generate_day_meals(
+                    day=day,
+                    meal_types=meal_types,
                     dietary_restrictions=parsed["dietary_restrictions"],
                     preferences=parsed["preferences"],
                     special_requirements=parsed["special_requirements"],
-                    day=day,
                     prep_time_max=parsed.get("prep_time_max"),
-                    duration_days=duration_days,
                     exclusions=parsed.get("exclusions", [])
                 )
-                recipe["meal_type"] = meal_type
-                meals.append(recipe)
+            else:
+                # Fallback to individual generation for strategies that don't support batch
+                meals = []
+                for meal_type in meal_types:
+                    recipe = await self.recipe_service.generate_recipe(
+                        meal_type=meal_type,
+                        dietary_restrictions=parsed["dietary_restrictions"],
+                        preferences=parsed["preferences"],
+                        special_requirements=parsed["special_requirements"],
+                        day=day,
+                        prep_time_max=parsed.get("prep_time_max"),
+                        duration_days=duration_days,
+                        exclusions=parsed.get("exclusions", [])
+                    )
+                    recipe["meal_type"] = meal_type
+                    meals.append(recipe)
             
             meal_plan.append({
                 "day": day,
