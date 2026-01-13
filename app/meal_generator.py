@@ -3,7 +3,7 @@ Meal plan generator - orchestrates query parsing and recipe generation
 """
 import uuid
 from datetime import datetime, timedelta
-from typing import Dict, List
+from typing import Dict, List, Optional
 from app.query_parser import QueryParser
 from app.recipe_service import RecipeService
 
