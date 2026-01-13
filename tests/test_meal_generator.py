@@ -43,8 +43,8 @@ class TestMealPlanGenerator:
     
     @pytest.mark.asyncio
     async def test_parallel_generation(self):
-        """Test that meals for a day are generated in parallel"""
-        query = "1-day meal plan"
+        """Test that meals and days are generated in parallel"""
+        query = "3-day meal plan"
         
         # Track call order to verify parallel execution
         call_times = []
@@ -52,7 +52,7 @@ class TestMealPlanGenerator:
         async def mock_generate_with_timing(*args, **kwargs):
             import time
             call_times.append(time.time())
-            await asyncio.sleep(0.1)  # Simulate API delay
+            await asyncio.sleep(0.05)  # Simulate API delay
             return {
                 "recipe_name": "Test Recipe",
                 "description": "Test",
@@ -72,11 +72,19 @@ class TestMealPlanGenerator:
             result = await self.generator.generate(query)
             end_time = time.time()
             
-            # With parallel generation, 3 meals should take ~0.1s (not 0.3s)
-            # Allow some margin for overhead
-            assert (end_time - start_time) < 0.25  # Should be much faster than sequential
-            assert len(result["meal_plan"]) == 1
-            assert len(result["meal_plan"][0]["meals"]) == 3
+            # With parallel generation across days AND meals:
+            # 3 days * 3 meals = 9 recipes, but all in parallel should take ~0.05s (not 0.45s)
+            # Allow generous margin for overhead
+            assert (end_time - start_time) < 0.2  # Should be much faster than sequential
+            assert len(result["meal_plan"]) == 3
+            assert all(len(day["meals"]) == 3 for day in result["meal_plan"])
+            
+            # Verify all calls happened close together (parallel)
+            if len(call_times) > 1:
+                time_diffs = [call_times[i+1] - call_times[i] for i in range(len(call_times)-1)]
+                # Most calls should start within 0.05s of each other (parallel)
+                parallel_calls = sum(1 for diff in time_diffs if diff < 0.05)
+                assert parallel_calls >= 5  # At least 5 calls should be truly parallel
     
     def test_calculate_summary(self):
         """Test summary calculation"""

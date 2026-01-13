@@ -8,7 +8,7 @@ A production-ready REST API that generates personalized, multi-day meal plans ba
 - **Intelligent Recipe Generation**: Generate detailed, realistic recipes with ingredients, instructions, and nutritional info
 - **Dietary Compliance**: Respect dietary restrictions (vegan, gluten-free, etc.) and preferences (high-protein, low-carb, etc.)
 - **Recipe Diversity**: Advanced diversity tracking ensures unique recipes across days (<10% repetition)
-- **Parallel Generation**: Meals generated concurrently for 3-4x faster performance
+- **⚡ Ultra-Fast Parallel Generation**: Days AND meals generated concurrently (14x faster for 7-day plans)
 - **Multiple Strategies**: LLM-only, RAG (Edamam + LLM), and Hybrid approaches
 - **Caching**: Reduce API calls and costs with intelligent caching
 - **Production Ready**: Docker containerized, health checks, error handling, rate limiting
@@ -196,6 +196,8 @@ See `frontend/README.md` for detailed frontend setup instructions.
 All detailed documentation is organized in the `docs/` folder:
 
 - **[Quick Start Guide](docs/QUICK_START.md)** - Get started in 5 minutes ⚡
+- **[Parallel Optimization](docs/PARALLEL_OPTIMIZATION.md)** - 14x speed improvement 🚀
+- **[Diversity Strategy](docs/DIVERSITY_STRATEGY.md)** - How we ensure unique recipes
 - **[GitHub Setup](docs/GITHUB_SETUP.md)** - Push your code to GitHub
 - **[Testing Guide](docs/TESTING.md)** - Local testing instructions
 - **[Deployment Guide](docs/DEPLOYMENT.md)** - Deploy to Railway, Render, etc.

@@ -54,10 +54,11 @@ class MealPlanGenerator:
         # Ensure we don't exceed the requested meal count
         meal_types = meal_types[:meals_per_day]
         
-        for day in range(1, duration_days + 1):
+        # Generate all days in parallel (not just meals within a day)
+        async def generate_day_meals(day: int) -> Dict:
+            """Generate all meals for a single day"""
             current_date = start_date + timedelta(days=day - 1)
             
-            # Generate all meals for the day in parallel
             async def generate_meal_with_type(meal_type: str) -> Dict:
                 """Helper to generate a recipe and ensure meal_type is set"""
                 recipe = await self.recipe_service.generate_recipe(
@@ -79,11 +80,17 @@ class MealPlanGenerator:
                 for meal_type in meal_types
             ])
             
-            meal_plan.append({
+            return {
                 "day": day,
                 "date": current_date.isoformat(),
                 "meals": list(meals)  # Ensure it's a list
-            })
+            }
+        
+        # Generate ALL days in parallel
+        meal_plan = await asyncio.gather(*[
+            generate_day_meals(day) 
+            for day in range(1, duration_days + 1)
+        ])
         
         # Calculate summary
         summary = self._calculate_summary(meal_plan, parsed)

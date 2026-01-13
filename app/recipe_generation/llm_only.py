@@ -3,6 +3,7 @@ Pure LLM strategy: Generate recipes entirely using LLM (no external API)
 This is the baseline strategy for comparison
 """
 import json
+import asyncio
 from typing import Dict, List, Optional
 from openai import OpenAI
 from app.config import settings
@@ -18,9 +19,46 @@ class LLMOnlyStrategy(RecipeGenerationStrategy):
     def __init__(self):
         self.client = OpenAI(api_key=settings.openai_api_key)
         self.used_recipes = set()
+        self._lock = asyncio.Lock()  # Thread-safe access to used_recipes
     
     def get_strategy_name(self) -> str:
         return "llm_only"
+    
+    def _get_variety_hint(self, day: int, meal_type: str, preferences: List[str]) -> str:
+        """
+        Generate variety hints based on day to ensure diversity in parallel generation.
+        Uses simple variation techniques instead of forcing specific cuisines.
+        """
+        # Check if user specified a cuisine preference
+        user_has_cuisine = any(pref.lower() in ["indian", "mexican", "italian", "asian", "mediterranean", 
+                                                  "chinese", "japanese", "thai", "french", "greek"]
+                               for pref in preferences)
+        
+        if user_has_cuisine:
+            # Don't suggest cuisine, just vary the cooking method/ingredients
+            variety_hints = {
+                1: "Use grains as the base",
+                2: "Make it protein-focused",
+                3: "Include legumes or beans",
+                4: "Feature vegetables prominently",
+                5: "Use a soup or stew format",
+                6: "Make it a bowl or salad",
+                7: "Try a sandwich or wrap style"
+            }
+        else:
+            # Suggest cuisine variety only if user didn't specify
+            variety_hints = {
+                1: "Mediterranean or Italian inspired",
+                2: "Asian or Mexican inspired",
+                3: "Middle Eastern or Indian inspired",
+                4: "American or European inspired",
+                5: "Latin American or Thai inspired",
+                6: "Japanese or Greek inspired",
+                7: "Moroccan or fusion inspired"
+            }
+        
+        hint = variety_hints.get(day, variety_hints[1])
+        return f"Day {day} variety: {hint}"
     
     def reset(self):
         """Reset used recipes tracker"""
@@ -51,13 +89,17 @@ class LLMOnlyStrategy(RecipeGenerationStrategy):
         
         requirements_str = "\n".join(requirements) if requirements else "No specific restrictions"
         
-        # Get used recipes for this meal type to ensure diversity
-        used_for_meal_type = [name for name in self.used_recipes if meal_type.lower() in name.lower()]
-        used_for_meal_type = used_for_meal_type[:10]  # Limit to recent 10
+        # Get used recipes for this meal type (thread-safe)
+        async with self._lock:
+            used_for_meal_type = [name for name in self.used_recipes if meal_type.lower() in name.lower()]
+            used_for_meal_type = used_for_meal_type[:10]
         
-        diversity_constraint = ""
+        # Simple diversity: vary by day to ensure different recipes in parallel calls
+        variety_hint = self._get_variety_hint(day, meal_type, preferences)
+        
+        diversity_constraint = f"\n\nDIVERSITY: {variety_hint}. Make it unique and different."
         if used_for_meal_type:
-            diversity_constraint = f"\n\nIMPORTANT - DIVERSITY REQUIREMENT:\nDo NOT create recipes similar to these already used {meal_type} recipes:\n" + "\n".join(f"- {name}" for name in used_for_meal_type) + "\n\nCreate a completely different and unique recipe. Vary the cuisine style, main ingredients, and cooking method."
+            diversity_constraint += f"\nAvoid similar to: {', '.join(used_for_meal_type[:5])}"
         
         system_prompt = """You are a professional chef and nutritionist. Generate detailed, realistic, and cookable recipes.
 
@@ -118,14 +160,13 @@ Make sure:
             recipe = json.loads(response.choices[0].message.content)
             recipe = self._validate_recipe(recipe, meal_type)
             
-            # Track used recipe name for diversity
+            # Track used recipe name for diversity (thread-safe)
             recipe_name = recipe.get("recipe_name", "").lower()
             if recipe_name:
-                self.used_recipes.add(recipe_name)
-                # Keep only recent 50 recipes to avoid memory bloat
-                if len(self.used_recipes) > 50:
-                    # Remove oldest (simple approach: keep last 50)
-                    self.used_recipes = set(list(self.used_recipes)[-50:])
+                async with self._lock:
+                    self.used_recipes.add(recipe_name)
+                    if len(self.used_recipes) > 50:
+                        self.used_recipes = set(list(self.used_recipes)[-50:])
             
             return recipe
             

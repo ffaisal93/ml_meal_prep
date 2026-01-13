@@ -4,6 +4,7 @@ This grounds LLM generation with real recipe data
 """
 import json
 import random
+import asyncio
 from typing import Dict, List, Optional
 from openai import OpenAI
 from cachetools import TTLCache
@@ -21,10 +22,10 @@ class RAGStrategy(RecipeGenerationStrategy):
     def __init__(self):
         self.client = OpenAI(api_key=settings.openai_api_key)
         self.retriever = RecipeRetriever()
-        # Cache candidates by meal_type + dietary constraints
         self.candidate_cache = TTLCache(maxsize=100, ttl=settings.cache_ttl_seconds)
-        self.used_candidates = {}  # Track used candidates per meal type
-        self.max_prompt_candidates = 3  # How many candidates to show the LLM per request
+        self.used_candidates = {}
+        self.max_prompt_candidates = 3
+        self._lock = asyncio.Lock()
     
     def get_strategy_name(self) -> str:
         return "rag"
@@ -60,16 +61,15 @@ class RAGStrategy(RecipeGenerationStrategy):
             print(f"No Edamam candidates found for {meal_type}, falling back to LLM-only")
             return await self._generate_llm_only(meal_type, dietary_restrictions, preferences, special_requirements, day, prep_time_max)
         
-        # Filter out already-used candidates
-        available_candidates = self._filter_used_candidates(candidates, meal_type)
-        
-        if not available_candidates:
-            # Reset if all candidates used
-            self.used_candidates[meal_type] = []
-            available_candidates = candidates
-        
-        random.shuffle(available_candidates)
-        selected_candidates = available_candidates[: self.max_prompt_candidates] or available_candidates
+        # Filter and select candidates (thread-safe)
+        async with self._lock:
+            available_candidates = self._filter_used_candidates(candidates, meal_type)
+            if not available_candidates:
+                self.used_candidates[meal_type] = []
+                available_candidates = candidates
+            
+            random.shuffle(available_candidates)
+            selected_candidates = available_candidates[: self.max_prompt_candidates] or available_candidates
 
         recipe = await self._generate_with_candidates(
             meal_type,
@@ -81,12 +81,14 @@ class RAGStrategy(RecipeGenerationStrategy):
             selected_candidates,
         )
 
-        if meal_type not in self.used_candidates:
-            self.used_candidates[meal_type] = []
-        for cand in selected_candidates:
-            title = cand.get("title", "")
-            if title:
-                self.used_candidates[meal_type].append(title)
+        # Track used candidates (thread-safe)
+        async with self._lock:
+            if meal_type not in self.used_candidates:
+                self.used_candidates[meal_type] = []
+            for cand in selected_candidates:
+                title = cand.get("title", "")
+                if title:
+                    self.used_candidates[meal_type].append(title)
         
         return recipe
     
