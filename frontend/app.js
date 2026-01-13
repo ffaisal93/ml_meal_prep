@@ -1,57 +1,74 @@
 // Configuration
 const DEFAULT_API_URL = 'http://localhost:8000';
 
-// Get API URL from input or use default
+// Global abort controller for canceling requests
+let currentAbortController = null;
+
 function getApiUrl() {
     const apiUrlInput = document.getElementById('apiUrl');
     const url = apiUrlInput.value.trim();
     return url || DEFAULT_API_URL;
 }
 
-// Set example query
+function getUserId() {
+    let id = localStorage.getItem('mealPlannerUserId');
+    if (!id) {
+        if (window.crypto && window.crypto.randomUUID) {
+            id = 'user-' + window.crypto.randomUUID();
+        } else {
+            id = 'user-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+        }
+        localStorage.setItem('mealPlannerUserId', id);
+    }
+    return id;
+}
+
 function setExample(query) {
     document.getElementById('queryInput').value = query;
     document.getElementById('queryInput').focus();
 }
 
-// Generate meal plan
 async function generateMealPlan() {
     const queryInput = document.getElementById('queryInput');
     const query = queryInput.value.trim();
     const btn = document.getElementById('generateBtn');
     const btnText = document.getElementById('btnText');
     const btnLoader = document.getElementById('btnLoader');
+    const stopBtn = document.getElementById('stopBtn');
     const errorMessage = document.getElementById('errorMessage');
     const results = document.getElementById('results');
-
-    // Validate input
+    
     if (!query) {
         showError('Please enter a meal plan request');
         return;
     }
 
-    // Show loading state
+    // Create new abort controller
+    currentAbortController = new AbortController();
+
     btn.disabled = true;
     btnText.textContent = 'Generating...';
     btnLoader.style.display = 'block';
+    // Reset and show stop button
+    stopBtn.disabled = false;
+    stopBtn.textContent = '⏹️ Stop';
+    stopBtn.style.display = 'inline-block';
     errorMessage.style.display = 'none';
     results.style.display = 'none';
 
     try {
         const apiUrl = getApiUrl();
         const generationMode = document.getElementById('generationMode').value;
-        
-        // Build request body
+        const userId = getUserId();
+
         const requestBody = { query };
-        if (generationMode) {
-            requestBody.generation_mode = generationMode;
-        }
-        
+        if (generationMode) requestBody.generation_mode = generationMode;
+        if (userId) requestBody.user_id = userId;
+
         const response = await fetch(`${apiUrl}/api/generate-meal-plan`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
+            signal: currentAbortController.signal,
             body: JSON.stringify(requestBody),
         });
 
@@ -62,15 +79,32 @@ async function generateMealPlan() {
 
         const data = await response.json();
         displayResults(data);
-
+        if (userId) {
+            localStorage.setItem('mealPlannerUserId', userId);
+            await loadUserPreferences(userId);
+        }
     } catch (error) {
-        console.error('Error:', error);
-        showError(error.message || 'Failed to generate meal plan. Please check your API URL and try again.');
+        if (error.name === 'AbortError') {
+            showError('Generation stopped by user.');
+        } else {
+            console.error('Error:', error);
+            showError(error.message || 'Failed to generate meal plan. Please check your API URL and try again.');
+        }
     } finally {
-        // Reset button state
         btn.disabled = false;
         btnText.textContent = 'Generate Meal Plan';
         btnLoader.style.display = 'none';
+        stopBtn.style.display = 'none';
+        currentAbortController = null;
+    }
+}
+
+function stopGeneration() {
+    if (currentAbortController) {
+        currentAbortController.abort();
+        const stopBtn = document.getElementById('stopBtn');
+        stopBtn.disabled = true;
+        stopBtn.textContent = '⏹️ Stopping...';
     }
 }
 
@@ -121,6 +155,103 @@ function displayResults(data) {
 
     // Scroll to results
     results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Load user preferences/history
+async function loadUserPreferences(userId) {
+    if (!userId) {
+        document.getElementById('smartSuggestions').style.display = 'none';
+        document.getElementById('historySection').style.display = 'none';
+        return;
+    }
+    try {
+        const apiUrl = getApiUrl();
+        const resp = await fetch(`${apiUrl}/api/user/${encodeURIComponent(userId)}/preferences?limit=10`);
+        if (!resp.ok) throw new Error('Failed to load preferences');
+        const data = await resp.json();
+        const prefs = data.preferences || [];
+
+        // Smart suggestions: use last 2-3 queries
+        const suggestionChips = document.getElementById('suggestionChips');
+        suggestionChips.innerHTML = '';
+        const recent = prefs.slice(0, 3);
+        if (recent.length > 0) {
+            recent.forEach((p) => {
+                const chip = document.createElement('button');
+                chip.className = 'suggestion-chip';
+                chip.textContent = p.query;
+                chip.onclick = () => setExample(p.query);
+                suggestionChips.appendChild(chip);
+            });
+            suggestionChips.classList.remove('empty-state');
+        } else {
+            suggestionChips.textContent = 'Start generating meal plans to see personalized suggestions.';
+            suggestionChips.classList.add('empty-state');
+        }
+        document.getElementById('smartSuggestions').style.display = 'block';
+
+        // History cards
+        const historyCards = document.getElementById('historyCards');
+        historyCards.innerHTML = '';
+        if (prefs.length === 0) {
+            historyCards.textContent = 'Generate a meal plan to start building your history.';
+            historyCards.classList.add('empty-state');
+        } else {
+            prefs.forEach((p) => {
+                const card = document.createElement('div');
+                card.className = 'history-card';
+
+                const queryDiv = document.createElement('div');
+                queryDiv.className = 'history-query';
+                queryDiv.textContent = p.query;
+
+                const tagsDiv = document.createElement('div');
+                tagsDiv.className = 'history-tags';
+                const tags = []
+                    .concat(p.dietary_restrictions || [])
+                    .concat(p.preferences || [])
+                    .concat(p.special_requirements || []);
+                tags.forEach(t => {
+                    const tagEl = document.createElement('span');
+                    tagEl.className = 'history-tag';
+                    tagEl.textContent = t;
+                    tagsDiv.appendChild(tagEl);
+                });
+
+                const actionsDiv = document.createElement('div');
+                actionsDiv.className = 'history-actions';
+                const regenBtn = document.createElement('button');
+                regenBtn.className = 'regenerate-btn';
+                regenBtn.textContent = 'Regenerate';
+                regenBtn.onclick = () => regenerateMealPlan(p.query);
+                actionsDiv.appendChild(regenBtn);
+
+                card.appendChild(queryDiv);
+                card.appendChild(tagsDiv);
+                card.appendChild(actionsDiv);
+                historyCards.appendChild(card);
+            });
+            historyCards.classList.remove('empty-state');
+        }
+        document.getElementById('historySection').style.display = 'block';
+    } catch (e) {
+        console.warn('Failed to load preferences', e);
+        document.getElementById('smartSuggestions').style.display = 'none';
+        document.getElementById('historySection').style.display = 'none';
+    }
+}
+
+function toggleHistory() {
+    const content = document.getElementById('historyContent');
+    const btn = document.getElementById('historyToggleBtn');
+    const isHidden = content.style.display === 'none';
+    content.style.display = isHidden ? 'block' : 'none';
+    btn.textContent = isHidden ? 'Hide History' : 'View History';
+}
+
+function regenerateMealPlan(query) {
+    document.getElementById('queryInput').value = query;
+    generateMealPlan();
 }
 
 // Create day card
@@ -255,6 +386,7 @@ function openApiDocs() {
     window.open(`${apiUrl}/docs`, '_blank');
 }
 
+// Diversity evaluation
 // Allow Enter key to submit (but not Shift+Enter)
 document.getElementById('queryInput').addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -276,4 +408,10 @@ if (window.location.hostname !== 'localhost' && window.location.hostname !== '12
 document.getElementById('apiUrl').addEventListener('change', (e) => {
     localStorage.setItem('mealPlannerApiUrl', e.target.value);
 });
+
+// On page load, ensure user ID exists and load preferences
+(async function init() {
+    const userId = getUserId();
+    await loadUserPreferences(userId);
+})();
 

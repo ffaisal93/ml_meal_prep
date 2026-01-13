@@ -28,16 +28,6 @@
                 </div>
 
                 <div class="input-group">
-                    <label for="userId">User ID (for saving history):</label>
-                    <input 
-                        type="text" 
-                        id="userId" 
-                        placeholder="e.g., faisal-home, team-demo, etc."
-                    >
-                    <small>We use this ID to remember your past queries and suggestions.</small>
-                </div>
-
-                <div class="input-group">
                     <label for="generationMode">Recipe Generation Mode:</label>
                     <select id="generationMode" class="mode-select" title="Select recipe generation strategy">
                         <option value="">Default (Server Setting)</option>
@@ -61,10 +51,15 @@
                     ></textarea>
                 </div>
 
-                <button id="generateBtn" class="btn-primary" onclick="generateMealPlan()">
-                    <span id="btnText">Generate Meal Plan</span>
-                    <span id="btnLoader" class="loader" style="display: none;"></span>
-                </button>
+                <div class="button-group">
+                    <button id="generateBtn" class="btn-primary" onclick="generateMealPlan()">
+                        <span id="btnText">Generate Meal Plan</span>
+                        <span id="btnLoader" class="loader" style="display: none;"></span>
+                    </button>
+                    <button id="stopBtn" class="stop-button" onclick="stopGeneration()" style="display: none;">
+                        ⏹️ Stop
+                    </button>
+                </div>
 
                 <div class="example-queries">
                     <p class="examples-label">Try these examples:</p>
@@ -141,6 +136,7 @@
 
                 <div id="mealPlanDays" class="meal-plan-days"></div>
             </div>
+
         </main>
 
         <footer>
