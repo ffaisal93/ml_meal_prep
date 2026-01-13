@@ -1,59 +1,59 @@
 # AI Meal Planner - Frontend
 
-A beautiful, modern frontend for the AI Meal Planner API.
+A clean, responsive web interface for the AI Meal Planner API.
 
 ## Features
 
-- 🎨 Clean, responsive UI
-- 🍽️ Interactive meal plan generation
-- 📊 Nutritional information display
-- 🔄 Real-time generation with progress
-- 🛑 Cancel generation feature
-- 💾 Automatic user ID management (stored in localStorage)
+- Natural language meal plan requests
+- Four generation strategies (fast_llm, llm_only, rag, hybrid)
+- Real-time generation with progress indicators
+- Stop generation button for long requests
+- Automatic user ID management (localStorage)
+- Responsive design (mobile-friendly)
+- Configurable API URL
 
 ## Deployment
 
 ### GitHub Pages (Automatic)
 
-The frontend is automatically deployed to GitHub Pages when changes are pushed to the `frontend/` directory.
+The frontend deploys automatically when you push changes to the `frontend/` directory.
 
-**Live URL:** https://ffaisal93.github.io/ml_meal_prep/
+**Live URL**: https://ffaisal93.github.io/ml_meal_prep/
 
-### Enable GitHub Pages (One-time setup)
+### Setup (One-time)
 
-1. Go to your repository: https://github.com/ffaisal93/ml_meal_prep
-2. Click **Settings** → **Pages**
-3. Under "Build and deployment":
-   - **Source**: Select "GitHub Actions"
-4. The workflow will automatically deploy on the next push
+1. Go to repository Settings → Pages
+2. Under "Build and deployment":
+   - Source: Select "GitHub Actions"
+3. Push any change to trigger deployment
 
 ### Local Development
 
-Simply open `index.html` in your browser or use a local server:
+Open `index.html` in your browser, or use a local server:
 
 ```bash
 # Using Python
 cd frontend
 python3 -m http.server 8080
 
-# Or using Node.js
+# Or Node.js
 npx http-server -p 8080
 ```
 
-Then visit: http://localhost:8080
+Visit: http://localhost:8080
 
 ## Configuration
 
-The frontend automatically uses `http://localhost:8000` as the default API URL. You can:
+The frontend uses `http://localhost:8000` by default. You can:
 
-1. **Change it in the UI**: Modify the "API URL" field in the interface
-2. **Edit the default**: Change `DEFAULT_API_URL` in `app.js`:
+1. **Change in UI**: Modify the "API URL" field
+2. **Edit default**: Update `DEFAULT_API_URL` in `app.js`:
 
 ```javascript
 const DEFAULT_API_URL = 'http://localhost:8000';
 ```
 
-For production, update to your deployed backend URL:
+For production, point to your deployed backend:
 
 ```javascript
 const DEFAULT_API_URL = 'https://your-backend-url.com';
@@ -62,13 +62,49 @@ const DEFAULT_API_URL = 'https://your-backend-url.com';
 ## Files
 
 - `index.html` - Main HTML structure
-- `app.js` - JavaScript logic and API calls
+- `app.js` - JavaScript logic, API calls
 - `styles.css` - Styling and responsive design
 - `README.md` - This file
 
 ## API Integration
 
-The frontend expects the backend API to be running at the configured URL. See the main project README for backend setup instructions.
+The frontend expects these endpoints:
+
+- `POST /api/generate-meal-plan` - Generate meal plans
+- `GET /health` - Health check
+
+Request format:
+```json
+{
+  "query": "7-day meal plan",
+  "generation_mode": "fast_llm",
+  "user_id": "auto-generated-uuid"
+}
+```
+
+## Features Explained
+
+### Generation Strategies
+
+- **fast_llm**: Ultra-fast, minimal detail (2-3s per meal)
+- **llm_only**: Creative, detailed recipes
+- **rag**: Real recipes from Edamam API
+- **hybrid**: Mix of rag and llm_only
+
+### User ID
+
+Automatically generated and stored in localStorage. Used for:
+- Tracking user preferences
+- Personalizing future suggestions
+- No manual input required
+
+### Stop Button
+
+Allows canceling long-running requests (e.g., 7-day plans). Uses `AbortController` API.
+
+### Timeout Handling
+
+Requests timeout after 10 minutes to prevent browser hangs. Shows helpful error messages.
 
 ## Browser Support
 
@@ -77,4 +113,14 @@ The frontend expects the backend API to be running at the configured URL. See th
 - Safari
 - Edge
 
-Requires modern browser with ES6+ support and localStorage.
+Requires ES6+ support and localStorage.
+
+## Development Notes
+
+The code is intentionally simple:
+- No build step
+- No dependencies
+- Pure vanilla JavaScript
+- Works offline (except API calls)
+
+This makes it easy to deploy anywhere and modify without complex tooling.
