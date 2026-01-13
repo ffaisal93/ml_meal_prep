@@ -2,6 +2,7 @@
 Meal plan generator - orchestrates query parsing and recipe generation
 """
 import uuid
+import asyncio
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 from app.query_parser import QueryParser
@@ -56,10 +57,9 @@ class MealPlanGenerator:
         for day in range(1, duration_days + 1):
             current_date = start_date + timedelta(days=day - 1)
             
-            # Generate meals for the day
-            meals = []
-            
-            for meal_type in meal_types:
+            # Generate all meals for the day in parallel
+            async def generate_meal_with_type(meal_type: str) -> Dict:
+                """Helper to generate a recipe and ensure meal_type is set"""
                 recipe = await self.recipe_service.generate_recipe(
                     meal_type=meal_type,
                     dietary_restrictions=parsed["dietary_restrictions"],
@@ -71,12 +71,18 @@ class MealPlanGenerator:
                 )
                 # Ensure meal_type is included in the recipe
                 recipe["meal_type"] = meal_type
-                meals.append(recipe)
+                return recipe
+            
+            # Generate all meals concurrently for this day
+            meals = await asyncio.gather(*[
+                generate_meal_with_type(meal_type) 
+                for meal_type in meal_types
+            ])
             
             meal_plan.append({
                 "day": day,
                 "date": current_date.isoformat(),
-                "meals": meals
+                "meals": list(meals)  # Ensure it's a list
             })
         
         # Calculate summary

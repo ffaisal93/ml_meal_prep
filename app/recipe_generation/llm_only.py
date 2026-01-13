@@ -51,6 +51,14 @@ class LLMOnlyStrategy(RecipeGenerationStrategy):
         
         requirements_str = "\n".join(requirements) if requirements else "No specific restrictions"
         
+        # Get used recipes for this meal type to ensure diversity
+        used_for_meal_type = [name for name in self.used_recipes if meal_type.lower() in name.lower()]
+        used_for_meal_type = used_for_meal_type[:10]  # Limit to recent 10
+        
+        diversity_constraint = ""
+        if used_for_meal_type:
+            diversity_constraint = f"\n\nIMPORTANT - DIVERSITY REQUIREMENT:\nDo NOT create recipes similar to these already used {meal_type} recipes:\n" + "\n".join(f"- {name}" for name in used_for_meal_type) + "\n\nCreate a completely different and unique recipe. Vary the cuisine style, main ingredients, and cooking method."
+        
         system_prompt = """You are a professional chef and nutritionist. Generate detailed, realistic, and cookable recipes.
 
 Generate recipes that:
@@ -59,6 +67,7 @@ Generate recipes that:
 - Have clear, step-by-step instructions
 - Include accurate nutritional information
 - Are appropriate for the meal type and dietary requirements
+- Are diverse and unique (avoid repeating similar recipes)
 
 Return valid JSON only."""
         
@@ -69,7 +78,7 @@ Return valid JSON only."""
         user_prompt = f"""Generate a {meal_type} recipe for day {day}.
 
 Requirements:
-{requirements_str}{prep_time_constraint}
+{requirements_str}{prep_time_constraint}{diversity_constraint}
 
 Return a JSON object with this exact structure:
 {{
@@ -92,7 +101,8 @@ Make sure:
 - Nutritional info is realistic and accurate
 - Instructions are clear and actionable
 - Preparation time is realistic
-- Recipe name is creative and descriptive"""
+- Recipe name is creative and descriptive
+- Recipe is unique and different from previously generated recipes"""
         
         try:
             response = self.client.chat.completions.create(
@@ -102,11 +112,21 @@ Make sure:
                     {"role": "user", "content": user_prompt}
                 ],
                 response_format={"type": "json_object"},
-                temperature=0.8
+                temperature=0.9  # Increased temperature for more diversity
             )
             
             recipe = json.loads(response.choices[0].message.content)
             recipe = self._validate_recipe(recipe, meal_type)
+            
+            # Track used recipe name for diversity
+            recipe_name = recipe.get("recipe_name", "").lower()
+            if recipe_name:
+                self.used_recipes.add(recipe_name)
+                # Keep only recent 50 recipes to avoid memory bloat
+                if len(self.used_recipes) > 50:
+                    # Remove oldest (simple approach: keep last 50)
+                    self.used_recipes = set(list(self.used_recipes)[-50:])
+            
             return recipe
             
         except Exception as e:

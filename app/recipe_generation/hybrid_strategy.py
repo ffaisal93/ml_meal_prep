@@ -56,16 +56,20 @@ class HybridStrategy(RecipeGenerationStrategy):
         
         Determines whether to use RAG or LLM-only based on:
         - hybrid_rag_ratio configuration
-        - Deterministic selection (for consistency)
+        - Day number and meal type for better diversity distribution
         """
-        # Track meal count for this meal type
-        if meal_type not in self.meal_counter:
-            self.meal_counter[meal_type] = 0
-        self.meal_counter[meal_type] += 1
+        # Use day number and meal type to create a unique identifier
+        # This ensures better distribution across days, not just meal types
+        meal_type_idx = {"breakfast": 0, "lunch": 1, "dinner": 2, "snack": 3}.get(meal_type.lower(), 0)
         
-        # Deterministic selection based on ratio
-        # Example: rag_ratio=0.7 means every 10th meal, 7 use RAG, 3 use LLM
-        use_rag = (self.meal_counter[meal_type] % 10) < (self.rag_ratio * 10)
+        # Create a combined index: (day * 10 + meal_type_index) % 10
+        # This ensures different days get different strategy mixes
+        combined_index = (day * 10 + meal_type_idx) % 10
+        
+        # Deterministic selection based on ratio and day/meal combination
+        # Example: rag_ratio=0.7 means 7 out of 10 use RAG, 3 use LLM
+        # Using combined_index ensures variety across days
+        use_rag = combined_index < (self.rag_ratio * 10)
         
         if use_rag:
             # Use RAG strategy

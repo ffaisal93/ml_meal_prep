@@ -106,9 +106,14 @@ class RAGStrategy(RecipeGenerationStrategy):
         if cache_key in self.candidate_cache:
             return self.candidate_cache[cache_key]
         
-        # Calculate how many candidates needed
-        count = max(3, duration_days or 3)
-        count = min(count, 10)  # Cap at 10
+        # Calculate how many candidates needed - ensure enough for diversity
+        # For 7-day plans, we need at least 21 recipes (7 days × 3 meals)
+        # Fetch more candidates to ensure variety
+        if duration_days:
+            # Request more candidates: at least 3× duration_days, capped at 20
+            count = max(10, min(duration_days * 3, 20))
+        else:
+            count = 10  # Default for shorter plans
         
         noisy_preferences = list(preferences or [])
         noisy_preferences.extend(self._get_query_noise(meal_type))
@@ -131,7 +136,14 @@ class RAGStrategy(RecipeGenerationStrategy):
     def _filter_used_candidates(self, candidates: List[Dict], meal_type: str) -> List[Dict]:
         """Filter out candidates that have already been used"""
         used = set(self.used_candidates.get(meal_type, []))
-        return [c for c in candidates if c.get("title", "") not in used]
+        available = [c for c in candidates if c.get("title", "") not in used]
+        # If we've used too many, allow some reuse but prefer new ones
+        # This ensures we always have options even for long meal plans
+        if len(available) < 2 and len(candidates) > len(used):
+            # Reset used list for this meal type to allow reuse
+            self.used_candidates[meal_type] = []
+            return candidates
+        return available
     
     async def _generate_with_candidates(
         self,
@@ -180,7 +192,9 @@ IMPORTANT:
 - Use the EXACT nutritional values from the chosen candidate
 - Use the EXACT core ingredients from the chosen candidate
 - You may rephrase instructions for clarity, but stay true to the dish
-- Do NOT invent new ingredients or nutritional values"""
+- Do NOT invent new ingredients or nutritional values
+- Prioritize diversity: if multiple candidates match equally well, choose the one that's most different from recipes you've seen before
+- Vary cuisine styles, cooking methods, and main ingredients across different days"""
         
         user_prompt = f"""Generate a {meal_type} recipe for day {day}.
 
