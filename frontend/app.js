@@ -47,7 +47,13 @@ async function generateMealPlan() {
     currentAbortController = new AbortController();
 
     btn.disabled = true;
-    btnText.textContent = 'Generating...';
+    
+    // Estimate time based on query
+    const daysMatch = query.match(/(\d+)\s*[-\s]?day/i);
+    const days = daysMatch ? parseInt(daysMatch[1]) : 3;
+    const estimatedTime = days <= 3 ? '30-60 seconds' : days <= 5 ? '1-2 minutes' : '2-4 minutes';
+    
+    btnText.textContent = `Generating... (est. ${estimatedTime})`;
     btnLoader.style.display = 'block';
     // Reset and show stop button
     stopBtn.disabled = false;
@@ -65,12 +71,19 @@ async function generateMealPlan() {
         if (generationMode) requestBody.generation_mode = generationMode;
         if (userId) requestBody.user_id = userId;
 
+        // Set a longer timeout for large meal plans (10 minutes)
+        const timeoutId = setTimeout(() => {
+            currentAbortController.abort();
+        }, 600000); // 10 minutes
+
         const response = await fetch(`${apiUrl}/api/generate-meal-plan`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             signal: currentAbortController.signal,
             body: JSON.stringify(requestBody),
         });
+
+        clearTimeout(timeoutId);
 
         if (!response.ok) {
             const error = await response.json();
@@ -88,7 +101,16 @@ async function generateMealPlan() {
             showError('Generation stopped by user.');
         } else {
             console.error('Error:', error);
-            showError(error.message || 'Failed to generate meal plan. Please check your API URL and try again.');
+            let errorMsg = error.message || 'Failed to generate meal plan.';
+            
+            // Provide more helpful error messages
+            if (error.message && error.message.includes('fetch')) {
+                errorMsg = 'Connection failed. Please check:\n1. API is running\n2. API URL is correct\n3. No CORS issues';
+            } else if (error.message && error.message.includes('timeout')) {
+                errorMsg = 'Request timed out. Large meal plans may take 2-4 minutes. Please try again.';
+            }
+            
+            showError(errorMsg);
         }
     } finally {
         btn.disabled = false;
