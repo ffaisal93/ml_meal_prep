@@ -172,6 +172,56 @@ Try these example queries:
 - The API should have CORS enabled by default
 - Make sure you're accessing the frontend from `http://localhost:8080` (not `file://`)
 
+## Unit Tests
+
+The project includes comprehensive unit tests for core components.
+
+### Running Unit Tests
+
+```bash
+# Make sure you're in the project root and venv is activated
+source venv/bin/activate
+
+# Install test dependencies (if not already installed)
+pip install -r requirements.txt
+
+# Run all unit tests
+pytest tests/ -v
+
+# Run specific test file
+pytest tests/test_edge_cases.py -v
+pytest tests/test_query_validator.py -v
+pytest tests/test_meal_generator.py -v
+
+# Run with coverage report (if pytest-cov installed)
+pytest tests/ --cov=app --cov-report=html
+```
+
+### Test Files
+
+- **`tests/test_query_validator.py`**: Tests for query validation (duration limits, contradictions, meal count)
+- **`tests/test_edge_cases.py`**: Tests for assignment edge cases (all 5 test cases from requirements)
+- **`tests/test_meal_generator.py`**: Tests for meal plan generation (parallel execution, summary calculation)
+
+### What's Tested
+
+- ✅ Query parsing and validation
+- ✅ Duration limits (1-7 days)
+- ✅ Contradiction detection
+- ✅ Edge cases from assignment requirements
+- ✅ Meal plan generation logic
+- ✅ Parallel generation performance
+- ✅ Error handling
+
+### Test Examples
+
+The test suite includes tests for:
+- Basic queries: `"Create a 3-day vegetarian meal plan"`
+- Complex queries: `"7-day low-carb, dairy-free meal plan with high protein"`
+- Edge cases: `"10-day vegan plan"` (should cap at 7 days)
+- Contradictions: `"Pescatarian vegan meal plan"` (should raise error)
+- Ambiguous queries: `"healthy meals for next week"` (should use defaults)
+
 ## Quick Commands Reference
 
 ```bash
@@ -181,8 +231,11 @@ source venv/bin/activate
 # Start server
 uvicorn app.main:app --reload
 
-# Run tests
+# Run manual API tests
 ./test_api.sh
+
+# Run unit tests
+pytest tests/ -v
 
 # Deactivate venv (when done)
 deactivate
