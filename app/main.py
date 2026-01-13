@@ -1,15 +1,20 @@
 """
 FastAPI application - Main entry point
 """
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, Request, Depends
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 import logging
+from sqlalchemy.orm import Session
 
 from app.models import MealPlanRequest, MealPlanResponse, ErrorResponse, HealthResponse
 from app.meal_generator import MealPlanGenerator
 from app.config import settings
+from app.rate_limiter import limiter, check_system_rate_limit, rate_limit_handler
+from app.database import init_db, get_db, save_user_preference, get_user_preferences
+from app.query_parser import QueryParser
+from slowapi.errors import RateLimitExceeded
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -24,6 +29,12 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
+# Attach limiter to app
+app.state.limiter = limiter
+
+# Add rate limit exception handler
+app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
+
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
@@ -35,6 +46,14 @@ app.add_middleware(
 
 # Initialize meal generator
 meal_generator = MealPlanGenerator()
+query_parser = QueryParser()
+
+# Initialize database on startup
+@app.on_event("startup")
+async def startup_event():
+    """Initialize database on application startup"""
+    init_db()
+    logger.info("Database initialized")
 
 
 @app.get("/", tags=["Health"])
@@ -57,17 +76,62 @@ async def health_check():
     )
 
 
+@app.get("/api/user/{user_id}/preferences", tags=["User Preferences"])
+async def get_user_preferences_endpoint(
+    user_id: str,
+    limit: int = 10,
+    db: Session = Depends(get_db)
+):
+    """
+    Get recent meal plan preferences for a user
+    
+    Args:
+        user_id: User identifier
+        limit: Maximum number of preferences to return (default: 10)
+    
+    Returns:
+        List of user preferences with meal plan history
+    """
+    try:
+        preferences = get_user_preferences(db, user_id, limit)
+        
+        return {
+            "user_id": user_id,
+            "count": len(preferences),
+            "preferences": [
+                {
+                    "id": pref.id,
+                    "query": pref.query,
+                    "meal_plan_id": pref.meal_plan_id,
+                    "dietary_restrictions": pref.dietary_restrictions,
+                    "preferences": pref.preferences,
+                    "special_requirements": pref.special_requirements,
+                    "created_at": pref.created_at.isoformat()
+                }
+                for pref in preferences
+            ]
+        }
+    except Exception as e:
+        logger.error(f"Error fetching user preferences: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch user preferences: {str(e)}"
+        )
+
+
 @app.post(
     "/api/generate-meal-plan",
     response_model=MealPlanResponse,
     status_code=status.HTTP_200_OK,
     responses={
         400: {"model": ErrorResponse, "description": "Bad request"},
+        429: {"model": ErrorResponse, "description": "Rate limit exceeded"},
         500: {"model": ErrorResponse, "description": "Internal server error"}
     },
     tags=["Meal Plans"]
 )
-async def generate_meal_plan(request: MealPlanRequest):
+@limiter.limit(f"{settings.rate_limit_per_minute}/minute")
+async def generate_meal_plan(request: Request, request_body: MealPlanRequest):
     """
     Generate a personalized meal plan from a natural language query.
     
@@ -81,19 +145,58 @@ async def generate_meal_plan(request: MealPlanRequest):
     - "Create a 5-day vegetarian meal plan with high protein"
     - "I need a 3-day gluten-free meal plan, exclude dairy and nuts"
     - "Generate a week of low-carb meals for two people, budget-friendly"
+    
+    Rate Limits:
+    - 10 requests per minute per IP address
+    - System-wide rate limiting applies
     """
     try:
-        logger.info(f"Received meal plan request: {request.query[:100]}...")
+        # Check system-wide rate limit
+        if not check_system_rate_limit():
+            return JSONResponse(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                content={
+                    "error": "Rate limit exceeded. Try again later."
+                }
+            )
+        
+        logger.info(f"Received meal plan request: {request_body.query[:100]}...")
         
         # Validate query
-        if not request.query or len(request.query.strip()) == 0:
+        if not request_body.query or len(request_body.query.strip()) == 0:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Query cannot be empty"
             )
         
+        # Parse query to extract preferences (for storage)
+        parsed = query_parser.parse(request_body.query)
+        
         # Generate meal plan
-        meal_plan = meal_generator.generate(request.query)
+        meal_plan = meal_generator.generate(request_body.query)
+        
+        # Save user preference if user_id is provided
+        if request_body.user_id:
+            try:
+                # Create a new database session
+                from app.database import SessionLocal
+                db = SessionLocal()
+                try:
+                    save_user_preference(
+                        db=db,
+                        user_id=request_body.user_id,
+                        query=request_body.query,
+                        meal_plan_id=meal_plan.get('meal_plan_id'),
+                        dietary_restrictions=parsed.get('dietary_restrictions'),
+                        preferences=parsed.get('preferences'),
+                        special_requirements=parsed.get('special_requirements')
+                    )
+                    logger.info(f"Saved preference for user: {request_body.user_id}")
+                finally:
+                    db.close()
+            except Exception as e:
+                # Log error but don't fail the request
+                logger.warning(f"Failed to save user preference: {str(e)}")
         
         logger.info(f"Successfully generated meal plan: {meal_plan['meal_plan_id']}")
         

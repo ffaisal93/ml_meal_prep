@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 class MealPlanRequest(BaseModel):
     """Request model for meal plan generation"""
     query: str = Field(..., description="Natural language meal plan request", min_length=1)
+    user_id: Optional[str] = Field(None, description="Optional user ID for preference tracking")
 
 
 class NutritionalInfo(BaseModel):

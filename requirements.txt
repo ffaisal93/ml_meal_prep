@@ -7,4 +7,7 @@ python-dotenv==1.0.0
 httpx==0.25.2
 cachetools==5.3.2
 python-multipart==0.0.6
+slowapi==0.1.9
+sqlalchemy==2.0.23
+psycopg2-binary==2.9.9
 

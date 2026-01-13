@@ -11,5 +11,16 @@ API_PORT=8000
 CACHE_TTL_SECONDS=3600
 
 # Optional: Rate Limiting
-RATE_LIMIT_ENABLED=false
+RATE_LIMIT_ENABLED=true
+RATE_LIMIT_PER_MINUTE=10
+RATE_LIMIT_SYSTEM_MAX_RPS=50
+
+# Database Configuration
+# For Railway: DATABASE_URL is automatically provided when you add a PostgreSQL service
+# For local SQLite: Leave DATABASE_URL empty
+# DATABASE_URL=postgres://user:password@host:port/dbname
+
+# For Railway SQLite with persistent volume (optional):
+# PERSISTENT_VOLUME_PATH=/data
+# DB_PATH=meal_planner.db
 

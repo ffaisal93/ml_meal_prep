@@ -16,6 +16,10 @@ Welcome to the Meal Planner API documentation! This directory contains all detai
 - **[GitHub Setup Guide](GITHUB_SETUP.md)** - How to push your code to GitHub
 - **[Pre-Commit Checklist](PRE_COMMIT_CHECKLIST.md)** - What to verify before committing to GitHub
 
+### Database
+- **[Railway Database Setup](RAILWAY_DATABASE_SETUP.md)** - Database setup guide for Railway deployment
+- **[Database Benefits](DATABASE_BENEFITS.md)** - How the database helps with user preferences and personalization
+
 ---
 
 ## 🚀 Quick Links

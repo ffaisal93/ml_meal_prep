@@ -61,7 +61,7 @@ git commit -m "Initial commit: AI Meal Planner API
 
 ```bash
 # Replace 'yourusername' with your GitHub username
-git remote add origin https://github.com/yourusername/ml_meal_prep.git
+git remote add origin https://github.com/ffaisal93/ml_meal_prep.git
 
 # Verify remote was added
 git remote -v
