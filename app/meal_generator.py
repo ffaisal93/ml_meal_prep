@@ -208,14 +208,14 @@ class MealPlanGenerator:
             # Calculate summary
             summary = self._calculate_summary(meal_plan, parsed)
             
-            # Build response
+            # Build response - always include warning field (None if no warnings)
             response = {
                 "meal_plan_id": str(uuid.uuid4()),
                 "duration_days": duration_days,
                 "generated_at": datetime.now().isoformat(),
                 "meal_plan": meal_plan,
                 "summary": summary,
-                "warning": warning_message  # Add warning if contradictions were resolved
+                "warning": warning_message  # Warning if contradictions resolved, None otherwise
             }
             
             return response
@@ -345,15 +345,17 @@ class MealPlanGenerator:
         }
         
         # Build response with user-friendly warning
-        # Don't expose technical error details to users
+        # Always include a clear warning message explaining what happened
         warning = "I encountered an issue generating your custom meal plan. Here's a balanced 3-day meal plan to get you started. Please try again with a simpler request if you need something specific."
         
-        return {
+        response = {
             "meal_plan_id": str(uuid.uuid4()),
             "duration_days": 3,
             "generated_at": datetime.now().isoformat(),
             "meal_plan": meal_plan,
             "summary": summary,
-            "warning": warning
+            "warning": warning  # Always included in fallback cases
         }
+        
+        return response
 
