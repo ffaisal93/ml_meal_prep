@@ -79,6 +79,7 @@ class RAGStrategy(RecipeGenerationStrategy):
             day,
             prep_time_max,
             selected_candidates,
+            exclusions=kwargs.get('exclusions', [])
         )
 
         # Track used candidates (thread-safe)
@@ -154,7 +155,8 @@ class RAGStrategy(RecipeGenerationStrategy):
         special_requirements: List[str],
         day: int,
         prep_time_max: Optional[int],
-        candidates: List[Dict]
+        candidates: List[Dict],
+        exclusions: List[str] = None
     ) -> Dict:
         """Generate recipe using LLM with candidates as ground truth"""
         
@@ -174,6 +176,27 @@ class RAGStrategy(RecipeGenerationStrategy):
         candidate_prompt = "\n".join(candidate_list)
         
         # Build requirements
+        # Filter out excluded cuisines/styles from candidates
+        exclusions = exclusions or []
+        if exclusions:
+            filtered_candidates = []
+            for candidate in candidates:
+                title = candidate.get('title', '').lower()
+                source = candidate.get('source', '').lower()
+                # Check if any exclusion keyword is in the recipe title or source
+                excluded = False
+                for exclusion in exclusions:
+                    exclusion_lower = exclusion.lower()
+                    if exclusion_lower in title or exclusion_lower in source:
+                        excluded = True
+                        break
+                if not excluded:
+                    filtered_candidates.append(candidate)
+            
+            # If we filtered everything, fallback to original
+            if filtered_candidates:
+                candidates = filtered_candidates
+        
         requirements = []
         if dietary_restrictions:
             requirements.append(f"Dietary restrictions: {', '.join(dietary_restrictions)}")
@@ -183,43 +206,29 @@ class RAGStrategy(RecipeGenerationStrategy):
             requirements.append(f"Special requirements: {', '.join(special_requirements)}")
         if prep_time_max:
             requirements.append(f"Maximum preparation time: {prep_time_max} minutes")
+        if exclusions:
+            requirements.append(f"EXCLUDE: {', '.join(exclusions)} (do NOT choose recipes with these keywords)")
         
         requirements_str = "\n".join(requirements) if requirements else "No specific restrictions"
         
-        system_prompt = """You are a professional chef generating recipes based on real recipe candidates.
-Choose the BEST candidate that matches the user's requirements, then generate a complete recipe using that candidate's data as ground truth.
-
-IMPORTANT:
-- Use the EXACT nutritional values from the chosen candidate
-- Use the EXACT core ingredients from the chosen candidate
-- You may rephrase instructions for clarity, but stay true to the dish
-- Do NOT invent new ingredients or nutritional values
-- Prioritize diversity: if multiple candidates match equally well, choose the one that's most different from recipes you've seen before
-- Vary cuisine styles, cooking methods, and main ingredients across different days"""
+        system_prompt = """Chef. Pick best candidate matching requirements. Use EXACT nutrition/ingredients from candidate. Be diverse. Return JSON only."""
         
-        user_prompt = f"""Generate a {meal_type} recipe for day {day}.
+        user_prompt = f"""{meal_type} day {day}.
 
-Here are real recipe candidates from Edamam API:
+Candidates:
 {candidate_prompt}
 
 Requirements:
 {requirements_str}
 
-Choose ONE candidate that best matches the requirements, then generate a complete recipe JSON using that candidate's nutritional data and ingredients.
-
-Return JSON:
+Pick ONE. Use its EXACT nutrition. Return JSON:
 {{
-  "recipe_name": "<creative name based on chosen candidate>",
-  "description": "<1-2 sentence description>",
-  "ingredients": ["<quantity> <ingredient>", ...],  // Use candidate's ingredients
-  "nutritional_info": {{
-    "calories": <EXACT from chosen candidate>,
-    "protein": <EXACT from chosen candidate>,
-    "carbs": <EXACT from chosen candidate>,
-    "fat": <EXACT from chosen candidate>
-  }},
-  "preparation_time": "<X mins>",  // EXACT from chosen candidate
-  "instructions": "<step-by-step instructions, 3-5 steps>",
+  "recipe_name": "name",
+  "description": "desc",
+  "ingredients": ["qty ingredient"],
+  "nutritional_info": {{"calories": exact, "protein": exact, "carbs": exact, "fat": exact}},
+  "preparation_time": "X mins",
+  "instructions": "steps",
   "source": "AI Generated (based on Edamam recipe)"
 }}"""
         

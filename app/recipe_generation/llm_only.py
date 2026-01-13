@@ -4,6 +4,7 @@ This is the baseline strategy for comparison
 """
 import json
 import asyncio
+import random
 from typing import Dict, List, Optional
 from openai import OpenAI
 from app.config import settings
@@ -24,11 +25,17 @@ class LLMOnlyStrategy(RecipeGenerationStrategy):
     def get_strategy_name(self) -> str:
         return "llm_only"
     
-    def _get_variety_hint(self, day: int, meal_type: str, preferences: List[str]) -> str:
+    def _get_variety_hint(self, day: int, meal_type: str, preferences: List[str], exclusions: List[str] = None) -> str:
         """
         Generate variety hints based on day to ensure diversity in parallel generation.
         Uses simple variation techniques instead of forcing specific cuisines.
+        Respects exclusions to avoid suggesting excluded cuisines.
         """
+        import random
+        
+        exclusions = exclusions or []
+        exclusions_lower = [e.lower() for e in exclusions]
+        
         # Check if user specified a cuisine preference
         user_has_cuisine = any(pref.lower() in ["indian", "mexican", "italian", "asian", "mediterranean", 
                                                   "chinese", "japanese", "thai", "french", "greek"]
@@ -36,29 +43,43 @@ class LLMOnlyStrategy(RecipeGenerationStrategy):
         
         if user_has_cuisine:
             # Don't suggest cuisine, just vary the cooking method/ingredients
-            variety_hints = {
-                1: "Use grains as the base",
-                2: "Make it protein-focused",
-                3: "Include legumes or beans",
-                4: "Feature vegetables prominently",
-                5: "Use a soup or stew format",
-                6: "Make it a bowl or salad",
-                7: "Try a sandwich or wrap style"
-            }
+            variety_options = [
+                "grain-based",
+                "protein-focused",
+                "legume-based",
+                "veggie-forward"
+            ]
+            # Randomize but use day as seed for consistency
+            random.seed(day)
+            hint = random.choice(variety_options)
         else:
-            # Suggest cuisine variety only if user didn't specify
-            variety_hints = {
-                1: "Mediterranean or Italian inspired",
-                2: "Asian or Mexican inspired",
-                3: "Middle Eastern or Indian inspired",
-                4: "American or European inspired",
-                5: "Latin American or Thai inspired",
-                6: "Japanese or Greek inspired",
-                7: "Moroccan or fusion inspired"
-            }
+            # Suggest cuisine variety only if user didn't specify (keep it short)
+            all_cuisine_options = [
+                "Italian",
+                "Asian",
+                "Indian",
+                "Mexican",
+                "American",
+                "Thai"
+            ]
+            
+            # Filter out excluded cuisines
+            filtered_options = []
+            for option in all_cuisine_options:
+                option_lower = option.lower()
+                # Check if any exclusion keyword is in this option
+                if not any(excl in option_lower for excl in exclusions_lower):
+                    filtered_options.append(option)
+            
+            # If we filtered everything, use cooking methods instead
+            if not filtered_options:
+                filtered_options = ["grain-based", "protein-focused", "veggie-forward"]
+            
+            # Randomize but use day as seed for consistency across parallel calls
+            random.seed(day * 100 + hash(meal_type) % 100)
+            hint = random.choice(filtered_options)
         
-        hint = variety_hints.get(day, variety_hints[1])
-        return f"Day {day} variety: {hint}"
+        return hint
     
     def reset(self):
         """Reset used recipes tracker"""
@@ -95,56 +116,36 @@ class LLMOnlyStrategy(RecipeGenerationStrategy):
             used_for_meal_type = used_for_meal_type[:10]
         
         # Simple diversity: vary by day to ensure different recipes in parallel calls
-        variety_hint = self._get_variety_hint(day, meal_type, preferences)
+        # Get variety hint with exclusions
+        exclusions = kwargs.get('exclusions', [])
+        variety_hint = self._get_variety_hint(day, meal_type, preferences, exclusions)
         
-        diversity_constraint = f"\n\nDIVERSITY: {variety_hint}. Make it unique and different."
+        diversity_constraint = f"\n\nVariety: {variety_hint}. Be unique."
+        
+        # Add exclusion constraint if present
+        if exclusions:
+            diversity_constraint += f" NOT {', '.join(exclusions[:2])}."  # Limit to 2 exclusions
         if used_for_meal_type:
             diversity_constraint += f"\nAvoid similar to: {', '.join(used_for_meal_type[:5])}"
         
-        system_prompt = """You are a professional chef and nutritionist. Generate detailed, realistic, and cookable recipes.
-
-Generate recipes that:
-- Are realistic and actually cookable
-- Include specific ingredient quantities
-- Have clear, step-by-step instructions
-- Include accurate nutritional information
-- Are appropriate for the meal type and dietary requirements
-- Are diverse and unique (avoid repeating similar recipes)
-
-Return valid JSON only."""
+        system_prompt = """Professional chef. Generate realistic, cookable recipes with exact quantities and nutrition. Be diverse. Return JSON only."""
         
-        prep_time_constraint = ""
-        if prep_time_max:
-            prep_time_constraint = f"\nCRITICAL: The preparation_time must be {prep_time_max} minutes or less. Choose quick, simple recipes that can be prepared in this time."
+        prep_time_constraint = f" Max {prep_time_max}min." if prep_time_max else ""
         
-        user_prompt = f"""Generate a {meal_type} recipe for day {day}.
+        user_prompt = f"""{meal_type} recipe day {day}.{requirements_str}{prep_time_constraint}{diversity_constraint}
 
-Requirements:
-{requirements_str}{prep_time_constraint}{diversity_constraint}
-
-Return a JSON object with this exact structure:
+JSON format:
 {{
-  "recipe_name": "<creative recipe name>",
-  "description": "<1-2 sentence description of the dish>",
-  "ingredients": ["<quantity> <ingredient>", ...],
-  "nutritional_info": {{
-    "calories": <integer>,
-    "protein": <float in grams>,
-    "carbs": <float in grams>,
-    "fat": <float in grams>
-  }},
-  "preparation_time": "<X mins>",
-  "instructions": "<step-by-step cooking instructions, 3-5 steps>",
+  "recipe_name": "name",
+  "description": "brief desc",
+  "ingredients": ["qty ingredient", ...],
+  "nutritional_info": {{"calories": int, "protein": float, "carbs": float, "fat": float}},
+  "preparation_time": "X mins",
+  "instructions": "3-5 clear steps",
   "source": "AI Generated"
 }}
 
-Make sure:
-- Ingredients have specific quantities (e.g., "2 cups oats", "1 tbsp olive oil")
-- Nutritional info is realistic and accurate
-- Instructions are clear and actionable
-- Preparation time is realistic
-- Recipe name is creative and descriptive
-- Recipe is unique and different from previously generated recipes"""
+Include quantities, realistic nutrition, be unique."""
         
         try:
             response = self.client.chat.completions.create(

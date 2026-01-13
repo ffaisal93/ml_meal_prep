@@ -33,7 +33,7 @@ class QueryParser:
         try:
             parsed = self._parse_with_llm(query)
             # Validate and clean up
-            parsed = self._validate_and_clean(parsed)
+            parsed = self._validate_and_clean(parsed, query)
             # Run additional validators
             parsed, warnings = validator.validate(query, parsed)
             if warnings:
@@ -95,7 +95,7 @@ Return a JSON object with:
         result = json.loads(response.choices[0].message.content)
         return result
     
-    def _validate_and_clean(self, parsed: Dict) -> Dict:
+    def _validate_and_clean(self, parsed: Dict, query: str) -> Dict:
         """Validate and clean parsed results"""
         # Ensure duration is between 1-7
         duration = parsed.get("duration_days", 3)
@@ -144,6 +144,21 @@ Return a JSON object with:
         if isinstance(contradictions, str):
             contradictions = [contradictions]
         
+        # Extract exclusions from query (e.g., "not Mediterranean", "no Italian")
+        import re
+        exclusions = []
+        query_lower = query.lower()
+        exclusion_patterns = [
+            r'not\s+(\w+)',
+            r'no\s+(\w+)',
+            r'avoid\s+(\w+)',
+            r'without\s+(\w+)',
+            r'exclude\s+(\w+)'
+        ]
+        for pattern in exclusion_patterns:
+            matches = re.findall(pattern, query_lower)
+            exclusions.extend(matches)
+        
         return {
             "duration_days": duration,
             "meals_per_day": meals_per_day,
@@ -151,7 +166,8 @@ Return a JSON object with:
             "dietary_restrictions": list(set(dietary_restrictions)) if dietary_restrictions else [],
             "preferences": list(set(preferences)) if preferences else [],
             "special_requirements": list(set(special_requirements)) if special_requirements else [],
-            "contradictions": list(set(contradictions)) if contradictions else []
+            "contradictions": list(set(contradictions)) if contradictions else [],
+            "exclusions": list(set(exclusions)) if exclusions else []
         }
     
     def _parse_with_regex(self, query: str) -> Dict:

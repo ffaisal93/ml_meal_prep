@@ -68,7 +68,8 @@ class MealPlanGenerator:
                     special_requirements=parsed["special_requirements"],
                     day=day,
                     prep_time_max=parsed.get("prep_time_max"),  # Pass prep time constraint
-                    duration_days=duration_days  # Pass duration for candidate count calculation
+                    duration_days=duration_days,  # Pass duration for candidate count calculation
+                    exclusions=parsed.get("exclusions", [])  # Pass exclusions
                 )
                 # Ensure meal_type is included in the recipe
                 recipe["meal_type"] = meal_type

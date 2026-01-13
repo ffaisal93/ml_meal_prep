@@ -34,7 +34,8 @@ class RecipeService:
         special_requirements: List[str],
         day: int,
         prep_time_max: Optional[int] = None,
-        duration_days: Optional[int] = None
+        duration_days: Optional[int] = None,
+        exclusions: List[str] = None
     ) -> Dict:
         """
         Generate a single recipe using the configured strategy
@@ -58,7 +59,8 @@ class RecipeService:
             special_requirements=special_requirements,
             day=day,
             prep_time_max=prep_time_max,
-            duration_days=duration_days
+            duration_days=duration_days,
+            exclusions=exclusions or []
         )
     
     def reset_used_recipes(self):
