@@ -180,7 +180,7 @@ async def generate_meal_plan(request: Request, request_body: MealPlanRequest):
         generation_mode = request_body.generation_mode
         if generation_mode:
             # Validate mode
-            valid_modes = ["llm_only", "rag", "hybrid"]
+            valid_modes = ["llm_only", "rag", "hybrid", "fast_llm"]
             if generation_mode not in valid_modes:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
