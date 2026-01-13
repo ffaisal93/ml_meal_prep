@@ -211,26 +211,30 @@ class RAGStrategy(RecipeGenerationStrategy):
         
         requirements_str = "\n".join(requirements) if requirements else "No specific restrictions"
         
-        system_prompt = """Chef. Pick best candidate matching requirements. Use EXACT nutrition/ingredients from candidate. Be diverse. Return JSON only."""
+        system_prompt = """You are a chef selecting from real recipe candidates. Choose the best match for requirements and create a complete recipe using the candidate's exact nutritional data and core ingredients. Prioritize diversity. Return valid JSON only."""
         
-        user_prompt = f"""{meal_type} day {day}.
+        user_prompt = f"""Create a {meal_type} recipe for day {day}.
 
-Candidates:
+Available recipe candidates:
 {candidate_prompt}
 
 Requirements:
 {requirements_str}
 
-Pick ONE. Use its EXACT nutrition. Return JSON:
+Choose the ONE candidate that best matches requirements. Use its EXACT nutritional values and core ingredients.
+
+Return JSON:
 {{
-  "recipe_name": "name",
-  "description": "desc",
-  "ingredients": ["qty ingredient"],
-  "nutritional_info": {{"calories": exact, "protein": exact, "carbs": exact, "fat": exact}},
+  "recipe_name": "Creative name based on candidate",
+  "description": "Brief description",
+  "ingredients": ["2 cups flour", "1 tbsp oil", ...],
+  "nutritional_info": {{"calories": <exact from candidate>, "protein": <exact>, "carbs": <exact>, "fat": <exact>}},
   "preparation_time": "X mins",
-  "instructions": "steps",
+  "instructions": "Clear cooking steps",
   "source": "AI Generated (based on Edamam recipe)"
-}}"""
+}}
+
+Critical: Use EXACT nutrition from chosen candidate. Make recipe name natural and appetizing."""
         
         try:
             response = self.client.chat.completions.create(

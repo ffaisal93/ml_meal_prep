@@ -128,24 +128,31 @@ class LLMOnlyStrategy(RecipeGenerationStrategy):
         if used_for_meal_type:
             diversity_constraint += f"\nAvoid similar to: {', '.join(used_for_meal_type[:5])}"
         
-        system_prompt = """Professional chef. Generate realistic, cookable recipes with exact quantities and nutrition. Be diverse. Return JSON only."""
+        system_prompt = """You are a professional chef. Generate realistic, creative recipes with specific ingredients and accurate nutrition. Make each recipe unique and diverse. Return valid JSON only."""
         
-        prep_time_constraint = f" Max {prep_time_max}min." if prep_time_max else ""
+        prep_time_constraint = f"\n- Must be {prep_time_max} minutes or less" if prep_time_max else ""
         
-        user_prompt = f"""{meal_type} recipe day {day}.{requirements_str}{prep_time_constraint}{diversity_constraint}
+        user_prompt = f"""Create a {meal_type} recipe for day {day}.
 
-JSON format:
+Requirements:
+{requirements_str}{prep_time_constraint}{diversity_constraint}
+
+Return JSON:
 {{
-  "recipe_name": "name",
-  "description": "brief desc",
-  "ingredients": ["qty ingredient", ...],
-  "nutritional_info": {{"calories": int, "protein": float, "carbs": float, "fat": float}},
-  "preparation_time": "X mins",
-  "instructions": "3-5 clear steps",
+  "recipe_name": "Creative, natural recipe name",
+  "description": "Brief description of the dish",
+  "ingredients": ["2 cups oats", "1 tbsp honey", ...],
+  "nutritional_info": {{"calories": 400, "protein": 20.0, "carbs": 45.0, "fat": 12.0}},
+  "preparation_time": "20 mins",
+  "instructions": "Clear step-by-step precise cooking instructions",
   "source": "AI Generated"
 }}
 
-Include quantities, realistic nutrition, be unique."""
+Important:
+- Use a creative, appetizing recipe name
+- Include specific quantities for all ingredients
+- Provide realistic nutritional values
+- Make it different from other recipes"""
         
         try:
             response = self.client.chat.completions.create(
