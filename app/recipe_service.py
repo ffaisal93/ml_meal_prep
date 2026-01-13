@@ -25,7 +25,8 @@ class RecipeService:
         dietary_restrictions: List[str],
         preferences: List[str],
         special_requirements: List[str],
-        day: int
+        day: int,
+        prep_time_max: Optional[int] = None
     ) -> Dict:
         """
         Generate a single recipe using OpenAI
@@ -51,7 +52,7 @@ class RecipeService:
             return recipe
         
         # Generate new recipe
-        recipe = self._generate_with_llm(meal_type, dietary_restrictions, preferences, special_requirements, day)
+        recipe = self._generate_with_llm(meal_type, dietary_restrictions, preferences, special_requirements, day, prep_time_max)
         
         # Cache it
         self.cache[cache_key] = recipe.copy()
@@ -82,7 +83,8 @@ class RecipeService:
         dietary_restrictions: List[str],
         preferences: List[str],
         special_requirements: List[str],
-        day: int
+        day: int,
+        prep_time_max: Optional[int] = None
     ) -> Dict:
         """Generate recipe using OpenAI with structured output"""
         
@@ -94,6 +96,8 @@ class RecipeService:
             requirements.append(f"Preferences: {', '.join(preferences)}")
         if special_requirements:
             requirements.append(f"Special requirements: {', '.join(special_requirements)}")
+        if prep_time_max:
+            requirements.append(f"IMPORTANT: Preparation time must be {prep_time_max} minutes or less")
         
         requirements_str = "\n".join(requirements) if requirements else "No specific restrictions"
         
@@ -108,10 +112,14 @@ Generate recipes that:
 
 Return valid JSON only."""
         
+        prep_time_constraint = ""
+        if prep_time_max:
+            prep_time_constraint = f"\nCRITICAL: The preparation_time must be {prep_time_max} minutes or less. Choose quick, simple recipes that can be prepared in this time."
+        
         user_prompt = f"""Generate a {meal_type} recipe for day {day}.
 
 Requirements:
-{requirements_str}
+{requirements_str}{prep_time_constraint}
 
 Return a JSON object with this exact structure:
 {{

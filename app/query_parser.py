@@ -7,6 +7,7 @@ import re
 from typing import Dict, List, Optional
 from openai import OpenAI
 from app.config import settings
+from app.query_validator import validator
 
 
 class QueryParser:
@@ -33,11 +34,19 @@ class QueryParser:
             parsed = self._parse_with_llm(query)
             # Validate and clean up
             parsed = self._validate_and_clean(parsed)
+            # Run additional validators
+            parsed, warnings = validator.validate(query, parsed)
+            if warnings:
+                # Log warnings (could be returned or logged)
+                print(f"Validation warnings: {warnings}")
             return parsed
         except Exception as e:
             # Fallback to regex-based parsing
             print(f"LLM parsing failed: {e}, using fallback")
-            return self._parse_with_regex(query)
+            parsed = self._parse_with_regex(query)
+            # Still run validators on fallback
+            parsed, warnings = validator.validate(query, parsed)
+            return parsed
     
     def _parse_with_llm(self, query: str) -> Dict:
         """Use OpenAI to parse query with structured output"""
@@ -45,6 +54,8 @@ class QueryParser:
 
 Extract:
 - duration_days: Number of days (1-7, default 3 if not specified)
+- meals_per_day: Number of meals per day (1-4, default 3 if not specified)
+- meal_types: List of specific meal types requested (breakfast, lunch, dinner, snack)
 - dietary_restrictions: List of restrictions (vegan, vegetarian, gluten-free, dairy-free, nut-free, etc.)
 - preferences: List of preferences (high-protein, low-carb, keto, paleo, Mediterranean, etc.)
 - special_requirements: List of special requirements (budget-friendly, quick meals, under 15 minutes, etc.)
@@ -57,6 +68,8 @@ Return valid JSON only."""
 Return a JSON object with:
 {{
   "duration_days": <int 1-7>,
+  "meals_per_day": <int 1-4, optional, default 3>,
+  "meal_types": [<list of meal types: breakfast, lunch, dinner, snack, optional>],
   "dietary_restrictions": [<list of restrictions>],
   "preferences": [<list of preferences>],
   "special_requirements": [<list of special requirements>],
@@ -86,6 +99,28 @@ Return a JSON object with:
             duration = int(numbers[0]) if numbers else 3
         duration = max(1, min(7, int(duration)))
         
+        # Ensure meals_per_day is between 1-4
+        meals_per_day = parsed.get("meals_per_day", 3)
+        if isinstance(meals_per_day, str):
+            numbers = re.findall(r'\d+', meals_per_day)
+            meals_per_day = int(numbers[0]) if numbers else 3
+        meals_per_day = max(1, min(4, int(meals_per_day)))
+        
+        # Normalize meal_types
+        meal_types = parsed.get("meal_types", [])
+        if isinstance(meal_types, str):
+            meal_types = [meal_types]
+        if not meal_types:
+            # Default meal types based on count
+            if meals_per_day == 1:
+                meal_types = ["lunch"]
+            elif meals_per_day == 2:
+                meal_types = ["breakfast", "dinner"]
+            elif meals_per_day == 3:
+                meal_types = ["breakfast", "lunch", "dinner"]
+            else:
+                meal_types = ["breakfast", "lunch", "dinner", "snack"]
+        
         # Normalize lists
         dietary_restrictions = parsed.get("dietary_restrictions", [])
         if isinstance(dietary_restrictions, str):
@@ -105,6 +140,8 @@ Return a JSON object with:
         
         return {
             "duration_days": duration,
+            "meals_per_day": meals_per_day,
+            "meal_types": meal_types[:meals_per_day],  # Ensure count matches
             "dietary_restrictions": list(set(dietary_restrictions)) if dietary_restrictions else [],
             "preferences": list(set(preferences)) if preferences else [],
             "special_requirements": list(set(special_requirements)) if special_requirements else [],
@@ -124,6 +161,35 @@ Return a JSON object with:
             duration = 7
         
         duration = max(1, min(7, duration))
+        
+        # Extract meal count
+        meals_per_day = 3  # default
+        meal_count_match = re.search(r'(\d+)\s*meals?', query_lower)
+        if meal_count_match:
+            meals_per_day = int(meal_count_match.group(1))
+        meals_per_day = max(1, min(4, meals_per_day))
+        
+        # Determine meal types
+        meal_types = []
+        if 'breakfast' in query_lower:
+            meal_types.append('breakfast')
+        if 'lunch' in query_lower:
+            meal_types.append('lunch')
+        if 'dinner' in query_lower or 'supper' in query_lower:
+            meal_types.append('dinner')
+        if 'snack' in query_lower:
+            meal_types.append('snack')
+        
+        if not meal_types:
+            # Default based on count
+            if meals_per_day == 1:
+                meal_types = ['lunch']
+            elif meals_per_day == 2:
+                meal_types = ['breakfast', 'dinner']
+            elif meals_per_day == 3:
+                meal_types = ['breakfast', 'lunch', 'dinner']
+            else:
+                meal_types = ['breakfast', 'lunch', 'dinner', 'snack']
         
         # Extract dietary restrictions
         restrictions = []
@@ -160,6 +226,8 @@ Return a JSON object with:
         
         return {
             "duration_days": duration,
+            "meals_per_day": meals_per_day,
+            "meal_types": meal_types[:meals_per_day],
             "dietary_restrictions": restrictions,
             "preferences": preferences,
             "special_requirements": special,

@@ -46,12 +46,18 @@ class MealPlanGenerator:
         meal_plan = []
         start_date = datetime.now().date()
         
+        # Get meal configuration from parsed query
+        meals_per_day = parsed.get("meals_per_day", 3)
+        meal_types = parsed.get("meal_types", ["breakfast", "lunch", "dinner"])
+        
+        # Ensure we don't exceed the requested meal count
+        meal_types = meal_types[:meals_per_day]
+        
         for day in range(1, duration_days + 1):
             current_date = start_date + timedelta(days=day - 1)
             
             # Generate meals for the day
             meals = []
-            meal_types = ["breakfast", "lunch", "dinner"]
             
             for meal_type in meal_types:
                 recipe = self.recipe_service.generate_recipe(
@@ -59,7 +65,8 @@ class MealPlanGenerator:
                     dietary_restrictions=parsed["dietary_restrictions"],
                     preferences=parsed["preferences"],
                     special_requirements=parsed["special_requirements"],
-                    day=day
+                    day=day,
+                    prep_time_max=parsed.get("prep_time_max")  # Pass prep time constraint
                 )
                 # Ensure meal_type is included in the recipe
                 recipe["meal_type"] = meal_type
