@@ -28,6 +28,16 @@
                 </div>
 
                 <div class="input-group">
+                    <label for="userId">User ID (for saving history):</label>
+                    <input 
+                        type="text" 
+                        id="userId" 
+                        placeholder="e.g., faisal-home, team-demo, etc."
+                    >
+                    <small>We use this ID to remember your past queries and suggestions.</small>
+                </div>
+
+                <div class="input-group">
                     <label for="generationMode">Recipe Generation Mode:</label>
                     <select id="generationMode" class="mode-select" title="Select recipe generation strategy">
                         <option value="">Default (Server Setting)</option>
@@ -71,6 +81,31 @@
                         <button class="chip" onclick="setExample('I need a week of budget-friendly meals')">
                             Budget-friendly
                         </button>
+                    </div>
+                </div>
+
+                <div class="smart-suggestions" id="smartSuggestions" style="display: none;">
+                    <div class="section-title">
+                        <h3>💡 Smart Suggestions</h3>
+                        <p class="section-caption">Based on your recent meal plans</p>
+                    </div>
+                    <div id="suggestionChips" class="suggestion-chips empty-state">
+                        Start generating meal plans to see personalized suggestions.
+                    </div>
+                </div>
+
+                <div class="history-section" id="historySection" style="display: none;">
+                    <div class="history-header">
+                        <div>
+                            <h3>📚 My Meal Plans</h3>
+                            <p class="section-caption">Recently generated plans for quick reuse</p>
+                        </div>
+                        <button id="historyToggleBtn" class="link-button" onclick="toggleHistory()">View History</button>
+                    </div>
+                    <div id="historyContent" class="history-content" style="display: none;">
+                        <div id="historyCards" class="history-cards empty-state">
+                            Generate a meal plan to start building your history.
+                        </div>
                     </div>
                 </div>
             </div>

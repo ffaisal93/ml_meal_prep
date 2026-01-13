@@ -3,6 +3,7 @@ RAG Strategy: Fetch candidates from Edamam API, then LLM selects and refines
 This grounds LLM generation with real recipe data
 """
 import json
+import random
 from typing import Dict, List, Optional
 from openai import OpenAI
 from cachetools import TTLCache
@@ -23,6 +24,7 @@ class RAGStrategy(RecipeGenerationStrategy):
         # Cache candidates by meal_type + dietary constraints
         self.candidate_cache = TTLCache(maxsize=100, ttl=settings.cache_ttl_seconds)
         self.used_candidates = {}  # Track used candidates per meal type
+        self.max_prompt_candidates = 3  # How many candidates to show the LLM per request
     
     def get_strategy_name(self) -> str:
         return "rag"
@@ -66,18 +68,25 @@ class RAGStrategy(RecipeGenerationStrategy):
             self.used_candidates[meal_type] = []
             available_candidates = candidates
         
-        # Generate recipe using candidates
+        random.shuffle(available_candidates)
+        selected_candidates = available_candidates[: self.max_prompt_candidates] or available_candidates
+
         recipe = await self._generate_with_candidates(
-            meal_type, dietary_restrictions, preferences, special_requirements,
-            day, prep_time_max, available_candidates
+            meal_type,
+            dietary_restrictions,
+            preferences,
+            special_requirements,
+            day,
+            prep_time_max,
+            selected_candidates,
         )
-        
-        # Mark candidate as used
-        if available_candidates:
-            candidate_title = available_candidates[0].get("title", "")
-            if meal_type not in self.used_candidates:
-                self.used_candidates[meal_type] = []
-            self.used_candidates[meal_type].append(candidate_title)
+
+        if meal_type not in self.used_candidates:
+            self.used_candidates[meal_type] = []
+        for cand in selected_candidates:
+            title = cand.get("title", "")
+            if title:
+                self.used_candidates[meal_type].append(title)
         
         return recipe
     
@@ -101,17 +110,20 @@ class RAGStrategy(RecipeGenerationStrategy):
         count = max(3, duration_days or 3)
         count = min(count, 10)  # Cap at 10
         
-        # Fetch from Edamam
+        noisy_preferences = list(preferences or [])
+        noisy_preferences.extend(self._get_query_noise(meal_type))
+
         candidates = await self.retriever.get_candidates(
             meal_type=meal_type,
             dietary=dietary or [],
-            preferences=preferences or [],
+            preferences=noisy_preferences,
             prep_time_max=prep_time_max,
             count=count
         )
         
         # Cache candidates
         if candidates:
+            random.shuffle(candidates)
             self.candidate_cache[cache_key] = candidates
         
         return candidates
@@ -280,4 +292,22 @@ Return JSON:
             "source": f"Edamam: {candidate['source']}",
             "meal_type": meal_type
         }
+
+    def _get_query_noise(self, meal_type: str) -> List[str]:
+        """Add neutral descriptors to diversify Edamam results without breaking constraints."""
+        ambience_terms = [
+            "seasonal", "chef-inspired", "fresh", "vibrant", "modern", "comfort",
+            "home-style", "rustic", "colorful", "balanced", "weekday-friendly"
+        ]
+        meal_type_tags = {
+            "breakfast": ["energizing", "sunrise", "brunch-ready"],
+            "lunch": ["midday", "bistro", "light"],
+            "dinner": ["evening", "family-style", "hearty"],
+            "snack": ["bite-sized", "quick", "grab-and-go"],
+        }
+        noise = []
+        if meal_type.lower() in meal_type_tags:
+            noise.append(random.choice(meal_type_tags[meal_type.lower()]))
+        noise.extend(random.sample(ambience_terms, k=2))
+        return noise
 
