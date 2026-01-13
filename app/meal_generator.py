@@ -108,7 +108,8 @@ class MealPlanGenerator:
     
     async def generate(self, query: str) -> Dict:
         """
-        Generate a complete meal plan from a natural language query
+        Generate a complete meal plan from a natural language query.
+        Always returns a meal plan, falling back to default if generation fails.
         
         Args:
             query: Natural language meal plan request
@@ -116,107 +117,118 @@ class MealPlanGenerator:
         Returns:
             Complete meal plan dictionary matching MealPlanResponse model
         """
-        # Parse the query
-        parsed = self.query_parser.parse(query)
-        
-        # Resolve contradictions automatically
-        resolved_parsed, warning_message = self._resolve_contradictions(parsed)
-        parsed = resolved_parsed
-        
-        # Validate duration
-        duration_days = parsed["duration_days"]
-        if duration_days > 7:
-            duration_days = 7
-        if duration_days < 1:
-            duration_days = 1
-        
-        # Reset recipe tracking for new meal plan
-        self.recipe_service.reset_used_recipes()
-        
-        # Generate meal plan
-        meal_plan = []
-        start_date = datetime.now().date()
-        
-        # Get meal configuration from parsed query
-        meals_per_day = parsed.get("meals_per_day", 3)
-        meal_types = parsed.get("meal_types", ["breakfast", "lunch", "dinner"])
-        
-        # Ensure we don't exceed the requested meal count
-        meal_types = meal_types[:meals_per_day]
-        
-        # Check if strategy supports full-plan generation (fastest - 1 API call for everything!)
-        meal_plan = []
-        if hasattr(self.recipe_service.strategy, 'generate_full_plan'):
-            # Ultra-fast: generate ALL meals for ALL days in ONE call
-            all_meals = await self.recipe_service.strategy.generate_full_plan(
-                duration_days=duration_days,
-                meal_types=meal_types,
-                dietary_restrictions=parsed["dietary_restrictions"],
-                preferences=parsed["preferences"],
-                special_requirements=parsed["special_requirements"],
-                exclusions=parsed.get("exclusions", [])
-            )
+        try:
+            # Parse the query
+            parsed = self.query_parser.parse(query)
             
-            for day in range(1, duration_days + 1):
-                current_date = start_date + timedelta(days=day - 1)
-                meal_plan.append({
-                    "day": day,
-                    "date": current_date.isoformat(),
-                    "meals": all_meals[day - 1]
-                })
-        else:
-            # Standard: generate day by day
-            for day in range(1, duration_days + 1):
-                current_date = start_date + timedelta(days=day - 1)
+            # Resolve contradictions automatically
+            resolved_parsed, warning_message = self._resolve_contradictions(parsed)
+            parsed = resolved_parsed
+            
+            # Validate duration
+            duration_days = parsed["duration_days"]
+            if duration_days > 7:
+                duration_days = 7
+            if duration_days < 1:
+                duration_days = 1
+            
+            # Reset recipe tracking for new meal plan
+            self.recipe_service.reset_used_recipes()
+            
+            # Generate meal plan
+            meal_plan = []
+            start_date = datetime.now().date()
+            
+            # Get meal configuration from parsed query
+            meals_per_day = parsed.get("meals_per_day", 3)
+            meal_types = parsed.get("meal_types", ["breakfast", "lunch", "dinner"])
+            
+            # Ensure we don't exceed the requested meal count
+            meal_types = meal_types[:meals_per_day]
+            
+            # Check if strategy supports full-plan generation (fastest - 1 API call for everything!)
+            meal_plan = []
+            if hasattr(self.recipe_service.strategy, 'generate_full_plan'):
+                # Ultra-fast: generate ALL meals for ALL days in ONE call
+                all_meals = await self.recipe_service.strategy.generate_full_plan(
+                    duration_days=duration_days,
+                    meal_types=meal_types,
+                    dietary_restrictions=parsed["dietary_restrictions"],
+                    preferences=parsed["preferences"],
+                    special_requirements=parsed["special_requirements"],
+                    exclusions=parsed.get("exclusions", [])
+                )
                 
-                # Try batch generation if strategy supports it
-                if hasattr(self.recipe_service.strategy, 'generate_day_meals'):
-                    meals = await self.recipe_service.strategy.generate_day_meals(
-                        day=day,
-                        meal_types=meal_types,
-                        dietary_restrictions=parsed["dietary_restrictions"],
-                        preferences=parsed["preferences"],
-                        special_requirements=parsed["special_requirements"],
-                        prep_time_max=parsed.get("prep_time_max"),
-                        exclusions=parsed.get("exclusions", [])
-                    )
-                else:
-                    # Fallback to individual generation
-                    meals = []
-                    for meal_type in meal_types:
-                        recipe = await self.recipe_service.generate_recipe(
-                            meal_type=meal_type,
+                for day in range(1, duration_days + 1):
+                    current_date = start_date + timedelta(days=day - 1)
+                    meal_plan.append({
+                        "day": day,
+                        "date": current_date.isoformat(),
+                        "meals": all_meals[day - 1]
+                    })
+            else:
+                # Standard: generate day by day
+                for day in range(1, duration_days + 1):
+                    current_date = start_date + timedelta(days=day - 1)
+                    
+                    # Try batch generation if strategy supports it
+                    if hasattr(self.recipe_service.strategy, 'generate_day_meals'):
+                        meals = await self.recipe_service.strategy.generate_day_meals(
+                            day=day,
+                            meal_types=meal_types,
                             dietary_restrictions=parsed["dietary_restrictions"],
                             preferences=parsed["preferences"],
                             special_requirements=parsed["special_requirements"],
-                            day=day,
                             prep_time_max=parsed.get("prep_time_max"),
-                            duration_days=duration_days,
                             exclusions=parsed.get("exclusions", [])
                         )
-                        recipe["meal_type"] = meal_type
-                        meals.append(recipe)
-                
-                meal_plan.append({
-                    "day": day,
-                    "date": current_date.isoformat(),
-                    "meals": meals
-                })
+                    else:
+                        # Fallback to individual generation
+                        meals = []
+                        for meal_type in meal_types:
+                            recipe = await self.recipe_service.generate_recipe(
+                                meal_type=meal_type,
+                                dietary_restrictions=parsed["dietary_restrictions"],
+                                preferences=parsed["preferences"],
+                                special_requirements=parsed["special_requirements"],
+                                day=day,
+                                prep_time_max=parsed.get("prep_time_max"),
+                                duration_days=duration_days,
+                                exclusions=parsed.get("exclusions", [])
+                            )
+                            recipe["meal_type"] = meal_type
+                            meals.append(recipe)
+                    
+                    meal_plan.append({
+                        "day": day,
+                        "date": current_date.isoformat(),
+                        "meals": meals
+                    })
+            
+            # Calculate summary
+            summary = self._calculate_summary(meal_plan, parsed)
+            
+            # Build response
+            response = {
+                "meal_plan_id": str(uuid.uuid4()),
+                "duration_days": duration_days,
+                "generated_at": datetime.now().isoformat(),
+                "meal_plan": meal_plan,
+                "summary": summary,
+                "warning": warning_message  # Add warning if contradictions were resolved
+            }
+            
+            return response
         
-        # Calculate summary
-        summary = self._calculate_summary(meal_plan, parsed)
-        
-        # Build response
-        response = {
-            "meal_plan_id": str(uuid.uuid4()),
-            "duration_days": duration_days,
-            "generated_at": datetime.now().isoformat(),
-            "meal_plan": meal_plan,
-            "summary": summary,
-            "warning": warning_message  # Add warning if contradictions were resolved
-        }
-        
-        return response
+        except Exception as e:
+            # Log the error but always return a meal plan
+            import logging
+            logger = logging.getLogger(__name__)
+            error_msg = str(e) if str(e) else "Unknown error during meal plan generation"
+            logger.error(f"Error generating meal plan: {error_msg}", exc_info=True)
+            
+            # Return fallback meal plan
+            return await self._generate_fallback_meal_plan(query, error_msg)
     
     def _calculate_summary(self, meal_plan: List[Dict], parsed: Dict) -> Dict:
         """Calculate summary statistics for the meal plan"""
@@ -262,5 +274,86 @@ class MealPlanGenerator:
             "dietary_compliance": list(set(dietary_compliance)) if dietary_compliance else ["standard"],
             "estimated_cost": estimated_cost,
             "avg_prep_time": avg_prep_time
+        }
+    
+    async def _generate_fallback_meal_plan(self, query: Optional[str], error_message: str) -> Dict:
+        """
+        Generate a simple fallback meal plan when main generation fails.
+        Always returns a valid meal plan with a warning message.
+        """
+        from datetime import datetime, timedelta
+        
+        if not query:
+            query = "meal plan"
+        
+        # Simple default recipes that don't require API calls
+        default_recipes = {
+            "breakfast": {
+                "recipe_name": "Classic Oatmeal Bowl",
+                "description": "A hearty and nutritious breakfast to start your day",
+                "ingredients": ["1 cup rolled oats", "2 cups water or milk", "1 banana, sliced", "1 tbsp honey", "Pinch of salt"],
+                "nutritional_info": {"calories": 350, "protein": 12.0, "carbs": 65.0, "fat": 6.0},
+                "preparation_time": "10 mins",
+                "instructions": "1. Bring water/milk to a boil. 2. Add oats and salt, reduce heat. 3. Cook for 5 minutes, stirring occasionally. 4. Top with banana and honey.",
+                "source": "Default Recipe"
+            },
+            "lunch": {
+                "recipe_name": "Mixed Green Salad",
+                "description": "Fresh and healthy salad with a variety of vegetables",
+                "ingredients": ["4 cups mixed greens", "1 cucumber, sliced", "1 tomato, diced", "1/4 cup olive oil", "2 tbsp lemon juice", "Salt and pepper"],
+                "nutritional_info": {"calories": 280, "protein": 8.0, "carbs": 20.0, "fat": 22.0},
+                "preparation_time": "15 mins",
+                "instructions": "1. Wash and prepare all vegetables. 2. Combine greens, cucumber, and tomato in a large bowl. 3. Whisk together olive oil, lemon juice, salt, and pepper. 4. Drizzle dressing over salad and toss.",
+                "source": "Default Recipe"
+            },
+            "dinner": {
+                "recipe_name": "Grilled Chicken with Vegetables",
+                "description": "Simple and satisfying protein with seasonal vegetables",
+                "ingredients": ["2 chicken breasts", "2 cups mixed vegetables (broccoli, carrots, bell peppers)", "2 tbsp olive oil", "Salt, pepper, garlic powder"],
+                "nutritional_info": {"calories": 450, "protein": 40.0, "carbs": 15.0, "fat": 25.0},
+                "preparation_time": "30 mins",
+                "instructions": "1. Season chicken with salt, pepper, and garlic powder. 2. Heat oil in a pan over medium heat. 3. Cook chicken for 6-7 minutes per side. 4. Steam or roast vegetables until tender. 5. Serve together.",
+                "source": "Default Recipe"
+            }
+        }
+        
+        # Generate 3-day default plan
+        meal_plan = []
+        start_date = datetime.now().date()
+        
+        for day in range(1, 4):
+            current_date = start_date + timedelta(days=day - 1)
+            meals = []
+            
+            for meal_type in ["breakfast", "lunch", "dinner"]:
+                meal = default_recipes[meal_type].copy()
+                meal["meal_type"] = meal_type
+                meals.append(meal)
+            
+            meal_plan.append({
+                "day": day,
+                "date": current_date.isoformat(),
+                "meals": meals
+            })
+        
+        # Calculate summary
+        summary = {
+            "total_meals": 9,
+            "dietary_compliance": ["standard"],
+            "estimated_cost": "$25-35",
+            "avg_prep_time": "18 mins"
+        }
+        
+        # Build response with user-friendly warning
+        # Don't expose technical error details to users
+        warning = "I encountered an issue generating your custom meal plan. Here's a balanced 3-day meal plan to get you started. Please try again with a simpler request if you need something specific."
+        
+        return {
+            "meal_plan_id": str(uuid.uuid4()),
+            "duration_days": 3,
+            "generated_at": datetime.now().isoformat(),
+            "meal_plan": meal_plan,
+            "summary": summary,
+            "warning": warning
         }
 
