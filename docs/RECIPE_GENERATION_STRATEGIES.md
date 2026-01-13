@@ -95,6 +95,35 @@ EDAMAM_APP_KEY=your_app_key
 
 ---
 
+### Strategy D: Fast LLM (`fast_llm`)
+
+**Description:** Ultra-fast generation for entire meal plans in a single API call.
+
+**How it works:**
+- Generates ALL meals for ALL days in ONE LLM call
+- Adaptive detail based on plan duration (shorter details for longer plans)
+- Prioritizes speed over detailed instructions
+- Sequential generation with maximum batch optimization
+
+**Use cases:**
+- Quick previews and prototypes
+- Large meal plans (5-7 days)
+- Speed is critical
+- Cost optimization (minimal API calls)
+
+**Configuration:**
+```bash
+RECIPE_GENERATION_MODE=fast_llm
+```
+
+**Performance:**
+- 7-day plan (21 meals): **1 API call** total
+- 3-day plan (9 meals): **1 API call** total
+- Fastest strategy available
+- Good diversity through variety hints
+
+---
+
 ## ⚙️ Configuration
 
 ### Environment Variables
@@ -103,7 +132,7 @@ Add these to your `.env` file or Railway environment variables:
 
 ```bash
 # Recipe Generation Strategy (required)
-RECIPE_GENERATION_MODE=rag  # Options: "llm_only", "rag", "hybrid"
+RECIPE_GENERATION_MODE=rag  # Options: "llm_only", "rag", "hybrid", "fast_llm"
 
 # Hybrid Strategy Configuration (only for hybrid mode)
 HYBRID_RAG_RATIO=0.7  # Ratio of RAG recipes (0.0 to 1.0)
@@ -155,14 +184,16 @@ EDAMAM_USER_ID=your_user_id  # Optional, defaults to App ID
 
 ## 📊 Strategy Comparison
 
-| Feature | LLM-Only | RAG | Hybrid |
-|---------|----------|-----|--------|
-| **Nutrition Accuracy** | ⚠️ Variable | ✅ High (real data) | ✅ High (configurable) |
-| **Creativity** | ✅ High | ⚠️ Moderate | ✅ Balanced |
-| **API Costs** | ✅ Low (OpenAI only) | ⚠️ Medium (OpenAI + Edamam) | ⚠️ Medium |
-| **External Dependencies** | ✅ None | ⚠️ Edamam API | ⚠️ Edamam API |
-| **Recipe Quality** | ⚠️ Variable | ✅ Consistent | ✅ Configurable |
-| **Best For** | Testing, baseline | Production | Evaluation, flexibility |
+| Feature | LLM-Only | RAG | Hybrid | Fast LLM |
+|---------|----------|-----|--------|----------|
+| **Speed** | Moderate | Slow | Slow | ✅ Fastest |
+| **API Calls (7-day)** | 7 | 21 | 21 | 1 |
+| **Nutrition Accuracy** | ⚠️ Variable | ✅ High | ✅ High | ⚠️ Variable |
+| **Creativity** | ✅ High | ⚠️ Moderate | ✅ Balanced | ✅ High |
+| **Detail Level** | High | High | High | ⚠️ Adaptive |
+| **API Costs** | Low | Medium | Medium | ✅ Lowest |
+| **External Dependencies** | None | Edamam | Edamam | None |
+| **Best For** | Balanced | Production | Evaluation | Speed/Cost |
 
 ---
 
@@ -190,6 +221,12 @@ EDAMAM_USER_ID=your_user_id  # Optional, defaults to App ID
    export HYBRID_RAG_RATIO=0.7
    export EDAMAM_APP_ID=your_id
    export EDAMAM_APP_KEY=your_key
+   python3 -m uvicorn app.main:app --reload
+   ```
+
+4. **Test Fast LLM:**
+   ```bash
+   export RECIPE_GENERATION_MODE=fast_llm
    python3 -m uvicorn app.main:app --reload
    ```
 
