@@ -41,6 +41,53 @@ class HybridStrategy(RecipeGenerationStrategy):
         self.llm_strategy.reset()
         self.meal_counter.clear()
     
+    async def generate_day_meals(
+        self,
+        day: int,
+        meal_types: List[str],
+        dietary_restrictions: List[str],
+        preferences: List[str],
+        special_requirements: List[str],
+        prep_time_max: Optional[int] = None,
+        exclusions: List[str] = None
+    ) -> List[Dict]:
+        """
+        Generate all meals for a day using hybrid approach
+        Mix RAG and LLM-only for diversity
+        """
+        meals = []
+        for i, meal_type in enumerate(meal_types):
+            # Determine strategy per meal
+            meal_type_idx = {"breakfast": 0, "lunch": 1, "dinner": 2, "snack": 3}.get(meal_type.lower(), 0)
+            combined_index = (day * 10 + meal_type_idx) % 10
+            use_rag = combined_index < (self.rag_ratio * 10)
+            
+            if use_rag:
+                recipe = await self.rag_strategy.generate_recipe(
+                    meal_type=meal_type,
+                    dietary_restrictions=dietary_restrictions,
+                    preferences=preferences,
+                    special_requirements=special_requirements,
+                    day=day,
+                    prep_time_max=prep_time_max,
+                    exclusions=exclusions
+                )
+            else:
+                recipe = await self.llm_strategy.generate_recipe(
+                    meal_type=meal_type,
+                    dietary_restrictions=dietary_restrictions,
+                    preferences=preferences,
+                    special_requirements=special_requirements,
+                    day=day,
+                    prep_time_max=prep_time_max,
+                    exclusions=exclusions
+                )
+            
+            recipe["meal_type"] = meal_type
+            meals.append(recipe)
+        
+        return meals
+    
     async def generate_recipe(
         self,
         meal_type: str,

@@ -34,6 +34,35 @@ class RAGStrategy(RecipeGenerationStrategy):
         """Reset used candidates tracker"""
         self.used_candidates.clear()
     
+    async def generate_day_meals(
+        self,
+        day: int,
+        meal_types: List[str],
+        dietary_restrictions: List[str],
+        preferences: List[str],
+        special_requirements: List[str],
+        prep_time_max: Optional[int] = None,
+        exclusions: List[str] = None
+    ) -> List[Dict]:
+        """
+        Generate all meals for a day - RAG doesn't batch well, so generate sequentially
+        but with proper diversity tracking
+        """
+        meals = []
+        for meal_type in meal_types:
+            recipe = await self.generate_recipe(
+                meal_type=meal_type,
+                dietary_restrictions=dietary_restrictions,
+                preferences=preferences,
+                special_requirements=special_requirements,
+                day=day,
+                prep_time_max=prep_time_max,
+                exclusions=exclusions
+            )
+            recipe["meal_type"] = meal_type
+            meals.append(recipe)
+        return meals
+    
     async def generate_recipe(
         self,
         meal_type: str,
