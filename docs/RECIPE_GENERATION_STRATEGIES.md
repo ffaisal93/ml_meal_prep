@@ -44,6 +44,32 @@ RECIPE_GENERATION_MODE=llm_only
 3. LLM generates recipe using candidate's nutritional data and ingredients as "ground truth"
 4. Ensures realistic nutrition values and cookable recipes
 
+**Example workflow (3-day vegetarian plan):**
+```
+Day 1: Breakfast, Lunch, Dinner
+Day 2: Breakfast, Lunch, Dinner  
+Day 3: Breakfast, Lunch, Dinner
+
+API Calls to Edamam:
+1. Call 1: "vegetarian breakfast" → Get 5 breakfast candidates
+2. Call 2: "vegetarian lunch" → Get 5 lunch candidates
+3. Call 3: "vegetarian dinner" → Get 5 dinner candidates
+
+Total: 3 Edamam calls (not 9, because meal types repeat across days)
+
+For Day 1 Breakfast:
+- Pick best candidate from the 5 breakfast options
+- LLM refines it with user preferences
+- Use candidate's real nutrition data
+
+For Day 2 Breakfast:
+- Pick different candidate from the same 5 breakfast options
+- LLM refines differently for variety
+- Use that candidate's real nutrition data
+
+Result: Real nutrition values, no hallucination, efficient API usage
+```
+
 **Use cases:**
 - Realistic nutrition values required
 - Grounded in real recipes
@@ -59,9 +85,10 @@ EDAMAM_USER_ID=your_user_id  # Optional, defaults to App ID
 ```
 
 **API Efficiency:**
-- For a 3-day plan with breakfast/lunch/dinner: **3 API calls** (one per meal type)
-- For a 5-day plan with 2 meals/day: **2 API calls** (one per meal type)
-- Candidates are cached for 1 hour
+- 3-day plan (breakfast/lunch/dinner): **3 Edamam calls** + **3 LLM calls** = 6 total
+- 7-day plan (breakfast/lunch/dinner): **3 Edamam calls** + **21 LLM calls** = 24 total
+- Edamam candidates cached for 1 hour (reused across days)
+- Key: Meal TYPE determines Edamam calls, not number of days
 
 ---
 
