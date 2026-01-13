@@ -1,143 +1,80 @@
-# Meal Planner Frontend
+# AI Meal Planner - Frontend
 
-A beautiful, responsive landing page for the AI Meal Planner API.
+A beautiful, modern frontend for the AI Meal Planner API.
 
 ## Features
 
-- 🎨 Modern, clean UI design
-- 📱 Fully responsive (mobile-friendly)
-- 🔗 Connects to Railway-deployed API
-- ⚡ Fast and lightweight
-- 🎯 Example queries for quick testing
-- 💾 Saves API URL in localStorage
+- 🎨 Clean, responsive UI
+- 🍽️ Interactive meal plan generation
+- 📊 Nutritional information display
+- 🔄 Real-time generation with progress
+- 🛑 Cancel generation feature
+- 💾 Automatic user ID management (stored in localStorage)
 
-## Setup for GitHub Pages
+## Deployment
 
-### Option 1: Deploy to GitHub Pages (Recommended)
+### GitHub Pages (Automatic)
 
-1. **Move frontend files to docs folder:**
-   ```bash
-   # In your repository root
-   mkdir -p docs
-   cp -r frontend/* docs/
-   ```
+The frontend is automatically deployed to GitHub Pages when changes are pushed to the `frontend/` directory.
 
-2. **Enable GitHub Pages:**
-   - Go to your repository on GitHub
-   - Settings → Pages
-   - Source: Deploy from a branch
-   - Branch: `main` (or your default branch)
-   - Folder: `/docs`
-   - Click Save
+**Live URL:** https://ffaisal93.github.io/ml_meal_prep/
 
-3. **Your site will be available at:**
-   ```
-   https://yourusername.github.io/ml_meal_prep/
-   ```
+### Enable GitHub Pages (One-time setup)
 
-### Option 2: Use gh-pages branch
+1. Go to your repository: https://github.com/ffaisal93/ml_meal_prep
+2. Click **Settings** → **Pages**
+3. Under "Build and deployment":
+   - **Source**: Select "GitHub Actions"
+4. The workflow will automatically deploy on the next push
 
-1. **Install gh-pages:**
-   ```bash
-   npm install --save-dev gh-pages
-   ```
+### Local Development
 
-2. **Add to package.json:**
-   ```json
-   {
-     "scripts": {
-       "deploy": "gh-pages -d frontend"
-     }
-   }
-   ```
+Simply open `index.html` in your browser or use a local server:
 
-3. **Deploy:**
-   ```bash
-   npm run deploy
-   ```
+```bash
+# Using Python
+cd frontend
+python3 -m http.server 8080
 
-### Option 3: Manual GitHub Pages Setup
+# Or using Node.js
+npx http-server -p 8080
+```
 
-1. Create a `gh-pages` branch:
-   ```bash
-   git checkout -b gh-pages
-   git rm -rf .
-   git checkout main -- frontend/
-   git mv frontend/* .
-   git commit -m "Deploy to GitHub Pages"
-   git push origin gh-pages
-   ```
-
-2. Enable GitHub Pages pointing to `gh-pages` branch
+Then visit: http://localhost:8080
 
 ## Configuration
 
-### Setting Default API URL
+The frontend automatically uses `http://localhost:8000` as the default API URL. You can:
 
-Edit `app.js` and change the `DEFAULT_API_URL` constant:
+1. **Change it in the UI**: Modify the "API URL" field in the interface
+2. **Edit the default**: Change `DEFAULT_API_URL` in `app.js`:
 
 ```javascript
-const DEFAULT_API_URL = 'https://your-railway-app.railway.app';
+const DEFAULT_API_URL = 'http://localhost:8000';
 ```
 
-### Or let users configure it
+For production, update to your deployed backend URL:
 
-The frontend includes an input field where users can enter their Railway API URL. The URL is saved in localStorage for convenience.
-
-## Customization
-
-### Update GitHub Link
-
-Edit `index.html` and update the GitHub link:
-
-```html
-<a href="https://github.com/yourusername/ml_meal_prep" target="_blank">GitHub</a>
+```javascript
+const DEFAULT_API_URL = 'https://your-backend-url.com';
 ```
 
-### Change Colors
+## Files
 
-Edit `styles.css` and modify the CSS variables:
+- `index.html` - Main HTML structure
+- `app.js` - JavaScript logic and API calls
+- `styles.css` - Styling and responsive design
+- `README.md` - This file
 
-```css
-:root {
-    --primary-color: #6366f1;
-    --primary-dark: #4f46e5;
-    /* ... */
-}
-```
+## API Integration
 
-## Testing Locally
+The frontend expects the backend API to be running at the configured URL. See the main project README for backend setup instructions.
 
-1. **Serve the files:**
-   ```bash
-   cd frontend
-   python -m http.server 8080
-   # or
-   npx serve .
-   ```
+## Browser Support
 
-2. **Open in browser:**
-   ```
-   http://localhost:8080
-   ```
+- Chrome (recommended)
+- Firefox
+- Safari
+- Edge
 
-3. **Enter your Railway API URL** in the input field
-
-## Troubleshooting
-
-### CORS Issues
-
-If you get CORS errors, make sure your Railway API has CORS enabled (it should be enabled by default in the FastAPI app).
-
-### API Not Responding
-
-1. Check that your Railway API is running
-2. Verify the API URL is correct
-3. Test the API directly: `https://your-app.railway.app/health`
-
-### GitHub Pages Not Updating
-
-- Wait a few minutes for GitHub to rebuild
-- Clear your browser cache
-- Check the GitHub Pages build status in Settings → Pages
-
+Requires modern browser with ES6+ support and localStorage.
