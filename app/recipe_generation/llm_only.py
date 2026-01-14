@@ -93,7 +93,8 @@ class LLMOnlyStrategy(RecipeGenerationStrategy):
         preferences: List[str],
         special_requirements: List[str],
         prep_time_max: Optional[int] = None,
-        exclusions: List[str] = None
+        exclusions: List[str] = None,
+        duration_days: Optional[int] = None
     ) -> List[Dict]:
         """
         Generate ALL meals for a single day in ONE API call
