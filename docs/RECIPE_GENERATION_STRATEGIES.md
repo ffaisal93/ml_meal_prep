@@ -10,6 +10,15 @@ The system uses a **modular strategy pattern** that allows you to switch between
 - **Evaluation**: Compare different approaches side-by-side
 - **Extensibility**: Easy to add new strategies in the future
 
+## 📊 Quick Comparison
+
+| Strategy | Speed | Detail | API Calls (7-day) | Best For |
+|----------|-------|--------|-------------------|----------|
+| fast_llm | Fastest (40s) | Minimal | 2 OpenAI | Quick testing |
+| llm_only | Fast (60s) | Detailed | 8 OpenAI | Creativity |
+| rag | Medium (60-90s) | Detailed | 3 Edamam + 8 OpenAI | Real recipes |
+| hybrid | Medium (60-90s) | Balanced | 3 Edamam + 8 OpenAI | Mix (70% RAG, 30% LLM) |
+
 ## 📋 Available Strategies
 
 ### Strategy A: LLM-Only (`llm_only`)
