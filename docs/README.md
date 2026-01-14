@@ -4,6 +4,7 @@ Complete documentation for the Meal Planner API.
 
 ## Getting Started
 - **[Quick Start Guide](QUICK_START.md)** - Get up and running in minutes
+- **[API Documentation](API.md)** - Complete API reference
 - **[Testing Guide](TESTING.md)** - Local testing instructions
 
 ## Deployment
@@ -32,7 +33,8 @@ Complete documentation for the Meal Planner API.
 ## Quick Links
 
 - **Main README**: Project overview and features
-- **API Docs**: Visit `/docs` endpoint when API is running
+- **API Documentation**: [API.md](API.md) - Complete API reference
+- **Interactive API Docs**: Visit `/docs` endpoint when API is running (Swagger UI)
 - **Frontend README**: `frontend/README.md`
 - **Evaluation**: `evaluation/README.md`
 
