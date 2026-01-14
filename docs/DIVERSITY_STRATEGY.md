@@ -94,6 +94,39 @@ temperature=0.9  # Increases LLM creativity and variation
 - llm_only: Generates all meals for a day together (more coherent, fewer API calls)
 - fast_llm: Generates entire plan in one call (fastest, most efficient)
 
+## Diversity by Strategy
+
+### LLM-Only Strategy
+**Approach:** Variety hints + recipe tracking
+- Uses variety hints (cuisine-based suggestions per day)
+- Tracks used recipe names in thread-safe dictionary
+- Randomizes variety hint selection from 15+ cuisines
+- Filters hints by user exclusions (e.g., "not Mediterranean")
+- **Result:** 90-100% unique meals
+
+### RAG Strategy
+**Approach:** Candidate filtering + shuffling
+- Fetches 5-10 candidates per meal type from Edamam
+- Filters out previously used candidates
+- Shuffles remaining candidates before LLM selection
+- Natural diversity from real recipe database (1M+ recipes)
+- **Result:** 85-95% unique meals
+
+### Hybrid Strategy
+**Approach:** Combines both (70% RAG, 30% LLM-only)
+- Uses deterministic formula: `(day * 10 + meal_index) % 10 < 7`
+- With current ratio (0.7), all 21 meals use RAG approach
+- RAG meals: Candidate filtering and shuffling
+- LLM meals: Variety hints and tracking (if ratio changed)
+- **Result:** 85-95% unique meals (same as RAG with current settings)
+
+### Fast LLM Strategy
+**Approach:** Single-call generation
+- Generates all 21 meals in one API call
+- LLM handles diversity internally
+- Prompt emphasizes "all meals should be different"
+- **Result:** 80-90% unique meals
+
 ## Results
 
 **Typical diversity scores**:
