@@ -192,35 +192,51 @@ pytest tests/ -v
 pytest tests/test_edge_cases.py -v
 pytest tests/test_query_validator.py -v
 pytest tests/test_meal_generator.py -v
+pytest tests/test_strategies.py -v
+pytest tests/test_performance.py -v
 
 # Run with coverage report (if pytest-cov installed)
 pytest tests/ --cov=app --cov-report=html
+
+# Run only fast tests (skip performance tests)
+pytest tests/ -v -k "not performance"
 ```
 
 ### Test Files
 
-- **`tests/test_query_validator.py`**: Tests for query validation (duration limits, contradictions, meal count)
-- **`tests/test_edge_cases.py`**: Tests for assignment edge cases (all 5 test cases from requirements)
-- **`tests/test_meal_generator.py`**: Tests for meal plan generation (batch generation, diversity, summary calculation)
+- **`tests/test_query_validator.py`**: Tests for query validation (duration limits, contradictions, meal count, budget, prep time)
+- **`tests/test_edge_cases.py`**: Tests for assignment edge cases (all 5 test cases from requirements) + week queries, budget-friendly, exclusions
+- **`tests/test_meal_generator.py`**: Tests for meal plan generation (batch generation, diversity, summary calculation, contradiction resolution, fallback handling)
+- **`tests/test_strategies.py`**: Tests for all 4 recipe generation strategies (llm_only, rag, hybrid, fast_llm) and generate_day_meals parameter validation
+- **`tests/test_performance.py`**: Performance benchmarks for batch generation (speed and diversity metrics)
 
 ### What's Tested
 
 - ✅ Query parsing and validation
 - ✅ Duration limits (1-7 days)
-- ✅ Contradiction detection
+- ✅ Week parsing ("week" = 7 days)
+- ✅ Contradiction detection and automatic resolution (with warnings)
 - ✅ Edge cases from assignment requirements
 - ✅ Meal plan generation logic
 - ✅ Batch generation performance and diversity
-- ✅ Error handling
+- ✅ Error handling and fallback meal plans
+- ✅ All 4 strategies (llm_only, rag, hybrid, fast_llm)
+- ✅ Budget-friendly requirements
+- ✅ Exclusions parsing ("not Mediterranean")
+- ✅ generate_day_meals with duration_days parameter
 
 ### Test Examples
 
 The test suite includes tests for:
 - Basic queries: `"Create a 3-day vegetarian meal plan"`
 - Complex queries: `"7-day low-carb, dairy-free meal plan with high protein"`
+- Week queries: `"I need a week of budget-friendly meals"` (parses as 7 days)
+- Budget-friendly: `"budget-friendly meals"` (extracts special requirement)
+- Exclusions: `"2-day vegetarian meal plan not mediterranean"` (extracts exclusions)
 - Edge cases: `"10-day vegan plan"` (should cap at 7 days)
-- Contradictions: `"Pescatarian vegan meal plan"` (should raise error)
+- Contradictions: `"Pescatarian vegan meal plan"` (should resolve with warning, not error)
 - Ambiguous queries: `"healthy meals for next week"` (should use defaults)
+- Fallback handling: Always returns a meal plan even on errors
 
 ## Quick Commands Reference
 
