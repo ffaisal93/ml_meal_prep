@@ -25,63 +25,63 @@ An intelligent meal planning system that generates personalized meal plans from 
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                         User Query                               │
+│                         User Query                              │
 │          "I need a week of budget-friendly meals"               │
 └────────────────────────┬────────────────────────────────────────┘
                          │
                          ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                    Query Parser (OpenAI)                         │
-│  • Extract: duration, dietary restrictions, preferences          │
+│                    Query Parser (OpenAI)                        │
+│  • Extract: duration, dietary restrictions, preferences         │
 │  • Validate: duration (1-7 days), contradictions                │
 │  • Output: Structured requirements                              │
 └────────────────────────┬────────────────────────────────────────┘
                          │
                          ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│              Contradiction Resolution & User History             │
-│  • Resolve conflicts (e.g., keto + high-carb → keep keto)      │
-│  • Store query in PostgreSQL/SQLite (if user_id provided)      │
+│              Contradiction Resolution & User History            │
+│  • Resolve conflicts (e.g., keto + high-carb → keep keto)       │
+│  • Store query in PostgreSQL/SQLite (if user_id provided)       │
 │  • Generate user-friendly warning if needed                     │
 └────────────────────────┬────────────────────────────────────────┘
                          │
                          ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                   Strategy Selection                             │
-│                                                                  │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐      │
-│  │Fast LLM  │  │LLM-Only  │  │   RAG    │  │ Hybrid   │      │
-│  │ 2 calls  │  │ 8 calls  │  │ 11 calls │  │ 11 calls │      │
-│  │ 40s      │  │ 60s      │  │ 60-90s   │  │ 60-90s   │      │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘      │
+│                   Strategy Selection                            │
+│                                                                 │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐         │
+│  │Fast LLM  │  │LLM-Only  │  │   RAG    │  │ Hybrid   │         │
+│  │ 2 calls  │  │ 8 calls  │  │ 11 calls │  │ 11 calls │         │
+│  │ 40s      │  │ 60s      │  │ 60-90s   │  │ 60-90s   │         │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘         │
 └────────────────────────┬────────────────────────────────────────┘
                          │
                          ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                    Recipe Generation                             │
+│                    Recipe Generation                            │
 │  • Day-by-day generation (batch meals per day)                  │
 │  • Diversity tracking (variety hints, candidate filtering)      │
-│  • Nutritional validation (RAG: exact Edamam data)             │
-│  • Caching (Edamam responses cached 1 hour)                    │
+│  • Nutritional validation (RAG: exact Edamam data)              │
+│  • Caching (Edamam responses cached 1 hour)                     │
 └────────────────────────┬────────────────────────────────────────┘
                          │
                          ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                  Response Validation                             │
+│                  Response Validation                            │
 │  • Pydantic model validation                                    │
 │  • Nutrition checks (realistic values)                          │
-│  • Prep time formatting (no decimals)                          │
-│  • Summary calculation (cost, avg prep time)                   │
+│  • Prep time formatting (no decimals)                           │
+│  • Summary calculation (cost, avg prep time)                    │
 └────────────────────────┬────────────────────────────────────────┘
                          │
                          ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                    Complete Meal Plan                            │
-│  • 21 recipes (7 days × 3 meals)                               │
+│                    Complete Meal Plan                           │
+│  • 21 recipes (7 days × 3 meals)                                │
 │  • Ingredients, instructions, nutrition                         │
-│  • Cost estimate, prep times                                   │
-│  • Warning message (if contradictions resolved)                │
-│  • Stored in user history (if user_id provided)                │
+│  • Cost estimate, prep times                                    │
+│  • Warning message (if contradictions resolved)                 │
+│  • Stored in user history (if user_id provided)                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
