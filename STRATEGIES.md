@@ -20,6 +20,11 @@ Each strategy implements the same interface but uses different approaches:
 | rag | Medium (60-90s) | Detailed | 3 Edamam + 8 OpenAI | Real recipes |
 | hybrid | Slower (135s) | Balanced | 3 Edamam + 8-15 OpenAI | Balance |
 
+**Important**: All strategies use efficient batching:
+- **"Batch"** = Multiple meals generated together in ONE API call
+- NOT one call per meal (that would be 21+ calls)
+- Example: "1 batch per day" = 1 call that generates breakfast + lunch + dinner together
+
 ## Detailed Breakdown
 
 ### fast_llm (New!)
@@ -80,19 +85,35 @@ Each strategy implements the same interface but uses different approaches:
 
 **Speed**: ~60-90s for 7-day plan (3-4s per meal)
 
-**How it works**:
-1. Fetches Edamam candidates for all meal types (cached per meal type)
-2. Filters by dietary restrictions and exclusions
-3. Sends all candidates to LLM in one batch call to generate all meals for the day
-4. LLM selects best match for each meal type and formats recipes
-5. Uses exact nutrition from Edamam database
+**How it works** (two-step process):
+
+**Step 1: Fetch Edamam Candidates** (External API)
+- Day 1: Makes 3 Edamam API calls (one per meal type: breakfast, lunch, dinner)
+- Each call fetches 5-10 recipe candidates with real nutrition data
+- Days 2-7: Uses cached candidates (0 Edamam calls)
+
+**Step 2: Generate Recipes with OpenAI** (This is the "batch")
+- For each day: Makes 1 OpenAI call that generates ALL meals together
+- Input: All Edamam candidates for breakfast, lunch, dinner
+- Output: 3 complete recipes (one per meal type)
+- LLM selects best candidate for each meal and formats it
+- Uses exact nutrition from chosen Edamam candidates
 
 **API calls for 7-day plan**:
-- **Edamam calls**: 3 (one per meal type: breakfast, lunch, dinner)
-  - Day 1: 3 calls (cache misses for each meal type)
-  - Days 2-7: 0 calls (uses cache)
-- **OpenAI calls**: 8 (1 for query parsing + 7 for batch recipe generation, one per day)
+- **Edamam calls**: 3 total
+  - Day 1: 3 calls (fetch candidates for breakfast, lunch, dinner)
+  - Days 2-7: 0 calls (uses cache from Day 1)
+- **OpenAI calls**: 8 total
+  - 1 call for query parsing
+  - 7 calls for recipe generation (one "batch" per day)
+  - Each batch generates all meals for that day together
 - **Total external calls**: 11
+
+**What "1 RAG batch" means**:
+- 1 OpenAI API call that generates multiple meals together
+- Example: Day 1 batch generates breakfast + lunch + dinner in ONE call
+- NOT multiple calls (not 1 call per meal)
+- Uses Edamam candidates that were already fetched
 
 **Caching behavior**:
 - Candidates cached per meal type using key: `{meal_type}|{dietary_restrictions}|{prep_time_max}`
@@ -120,33 +141,57 @@ Each strategy implements the same interface but uses different approaches:
 
 **Speed**: ~135s for 7-day plan (6-7s per meal)
 
-**How it works**:
-1. Groups meals by strategy (RAG vs LLM-only) per day
-2. Batches RAG meals together (one OpenAI call per day)
-3. Batches LLM-only meals together (one OpenAI call per day)
-4. Deterministic selection based on day/meal combination
-5. Combines results in original meal order
+**How it works** (two-step process per day):
+
+**Step 1: Fetch Edamam Candidates** (if RAG meals exist)
+- Same as RAG strategy: 3 Edamam calls on Day 1, cached for Days 2-7
+
+**Step 2: Generate Recipes with OpenAI** (batched by strategy)
+- Groups meals by strategy (RAG vs LLM-only) per day
+- **RAG batch**: 1 OpenAI call that generates all RAG meals together
+  - Uses Edamam candidates that were already fetched
+  - Example: If Day 1 has breakfast (RAG) + lunch (RAG), generates both in ONE call
+- **LLM batch**: 1 OpenAI call that generates all LLM-only meals together
+  - Pure AI generation (no Edamam candidates)
+  - Example: If Day 1 has dinner (LLM), generates it in ONE call
+- Combines results in original meal order
 
 **API calls for 7-day plan** (with 70% RAG ratio):
-- **Edamam calls**: 3 (one per meal type, cached - same as RAG)
-- **OpenAI calls**: 8-15 (depends on actual meal distribution)
-  - 1 parse call
-  - RAG meals: Batched per day (1 call per day if RAG meals exist)
-  - LLM-only meals: Batched per day (1 call per day if LLM meals exist)
+
+**Step 1: Edamam Calls**
+- **Edamam calls**: 3 total (same as RAG strategy)
+  - Day 1: 3 calls (fetch candidates for breakfast, lunch, dinner)
+  - Days 2-7: 0 calls (uses cache)
+
+**Step 2: OpenAI Calls**
+- **OpenAI calls**: 8-15 (depends on meal distribution)
+  - 1 call for query parsing
+  - RAG batches: 1 call per day (if RAG meals exist)
+    - Each batch = 1 OpenAI call that generates all RAG meals together
+  - LLM batches: 1 call per day (if LLM meals exist)
+    - Each batch = 1 OpenAI call that generates all LLM meals together
   - **Actual**: With current formula, typically 8 calls (all meals use RAG)
-  - **Maximum**: 15 calls if days alternate between RAG and LLM-only meals
-- **Total**: 11-18 external API calls
+  - **Maximum**: 15 calls if each day has both RAG and LLM meals
 
-**How 15 calls would occur (theoretical maximum)**:
-- If each day has both RAG and LLM-only meals:
-  - Day 1: 1 RAG batch + 1 LLM batch = 2 calls
-  - Day 2: 1 RAG batch + 1 LLM batch = 2 calls
-  - ... (7 days)
-  - Total: 1 parse + (7 RAG batches) + (7 LLM batches) = 15 calls
+**Total**: 11-18 external API calls
 
-**Current behavior**: With the deterministic selection formula, all meals typically use RAG, resulting in 8 calls (same as pure RAG strategy).
+**Example: How 15 calls would occur** (theoretical maximum):
+- Day 1: breakfast (RAG) + lunch (RAG) + dinner (LLM)
+  - 1 RAG batch (generates breakfast + lunch together) = 1 OpenAI call
+  - 1 LLM batch (generates dinner) = 1 OpenAI call
+  - Total for Day 1: 2 OpenAI calls
+- If all 7 days follow this pattern: 7 × 2 = 14 + 1 parse = 15 calls
 
-**Note**: Uses efficient batching - groups RAG and LLM-only meals separately per day, then batches each group. The actual call count depends on how the ratio distributes across days.
+**Current behavior**: With the deterministic selection formula, all meals typically use RAG, resulting in 8 OpenAI calls (same as pure RAG strategy).
+
+**What "1 RAG batch" means**:
+- 1 OpenAI call that generates multiple RAG meals together
+- Uses Edamam candidates that were already fetched
+- NOT multiple calls (not 1 call per meal)
+
+**What "1 LLM batch" means**:
+- 1 OpenAI call that generates multiple LLM-only meals together
+- Pure AI generation (no Edamam candidates)
 
 **Output quality**: Mix of real and AI-generated
 - Variety in both approach and content
