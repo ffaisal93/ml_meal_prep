@@ -104,10 +104,13 @@ async function generateMealPlan() {
             let errorMsg = error.message || 'Failed to generate meal plan.';
             
             // Provide more helpful error messages
-            if (error.message && error.message.includes('fetch')) {
-                errorMsg = 'Connection failed. Please check:\n1. API is running\n2. API URL is correct\n3. No CORS issues';
+            if (error.message && (error.message.includes('fetch') || error.message.includes('Failed to fetch'))) {
+                const apiUrl = getApiUrl();
+                errorMsg = `Connection failed. Please check:\n1. API is running\n2. API URL is correct (currently: ${apiUrl})\n3. No CORS issues\n4. If using GitHub Pages, make sure API URL points to Railway (not localhost)`;
             } else if (error.message && error.message.includes('timeout')) {
                 errorMsg = 'Request timed out. Large meal plans may take 2-4 minutes. Please try again.';
+            } else if (error.message && error.message.includes('NetworkError')) {
+                errorMsg = 'Network error. Please check your internet connection and API URL.';
             }
             
             showError(errorMsg);
@@ -432,8 +435,20 @@ document.getElementById('queryInput').addEventListener('keydown', (e) => {
 if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
     // If on GitHub Pages, try to detect Railway URL from localStorage or prompt
     const savedApiUrl = localStorage.getItem('mealPlannerApiUrl');
-    if (savedApiUrl) {
+    if (savedApiUrl && savedApiUrl !== 'http://localhost:8000') {
         document.getElementById('apiUrl').value = savedApiUrl;
+    } else {
+        // Show a helpful message if using default localhost on GitHub Pages
+        const apiUrlInput = document.getElementById('apiUrl');
+        apiUrlInput.placeholder = 'Enter Railway API URL (e.g., https://your-app.railway.app)';
+        apiUrlInput.style.borderColor = '#ff6b6b';
+        
+        // Add a note below the input
+        const apiUrlNote = document.createElement('div');
+        apiUrlNote.id = 'apiUrlNote';
+        apiUrlNote.style.cssText = 'color: #ff6b6b; font-size: 0.85em; margin-top: 5px;';
+        apiUrlNote.textContent = '⚠️ Please set your Railway API URL above (localhost won\'t work on GitHub Pages)';
+        apiUrlInput.parentElement.appendChild(apiUrlNote);
     }
 }
 

@@ -224,13 +224,12 @@ async def generate_meal_plan(request: Request, request_body: MealPlanRequest):
     except Exception as e:
         # This should never happen now since generate() always returns a meal plan
         # But keep as safety net - generate fallback directly
-        logger.error(f"Unexpected error in endpoint: {str(e)}", exc_info=True)
+        error_msg = str(e) if str(e) else "Unknown error"
+        logger.error(f"Unexpected error in endpoint: {error_msg}", exc_info=True)
         from app.meal_generator import MealPlanGenerator
         fallback_generator = MealPlanGenerator()
-        return await fallback_generator._generate_fallback_meal_plan(
-            request_body.query if request_body else "meal plan",
-            str(e)
-        )
+        query_text = request_body.query if request_body and hasattr(request_body, 'query') else "meal plan"
+        return await fallback_generator._generate_fallback_meal_plan(query_text, error_msg)
 
 
 @app.exception_handler(Exception)

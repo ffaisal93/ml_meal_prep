@@ -60,11 +60,12 @@ IMPORTANT RULES:
 
 Extract:
 - duration_days: Number of days (1-7, default 3 if not specified)
+  * IMPORTANT: "week" or "weekly" = 7 days, "month" = 7 days (max allowed)
 - meals_per_day: Number of meals per day (1-4, default 3 if not specified)
 - meal_types: List of specific meal types requested (breakfast, lunch, dinner, snack)
 - dietary_restrictions: List of restrictions (vegan, vegetarian, gluten-free, dairy-free, nut-free, etc.)
 - preferences: List of preferences (high-protein, low-carb, keto, paleo, Mediterranean, etc.)
-- special_requirements: List of special requirements (budget-friendly, quick meals, under 15 minutes, etc.)
+- special_requirements: List of special requirements (budget-friendly, cheap, affordable, quick meals, under 15 minutes, etc.)
 - contradictions: List ONLY actual contradictory requirements. Do NOT include negations or typos.
 
 Return valid JSON only."""
@@ -103,6 +104,12 @@ Return a JSON object with:
             # Extract number from string
             numbers = re.findall(r'\d+', duration)
             duration = int(numbers[0]) if numbers else 3
+        
+        # Check query for "week" or "weekly" if duration wasn't explicitly set
+        query_lower = query.lower()
+        if ('week' in query_lower or 'weekly' in query_lower) and duration < 7:
+            duration = 7
+        
         duration = max(1, min(7, int(duration)))
         
         # Ensure meals_per_day is between 1-4
