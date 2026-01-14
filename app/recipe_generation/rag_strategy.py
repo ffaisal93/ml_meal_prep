@@ -42,26 +42,197 @@ class RAGStrategy(RecipeGenerationStrategy):
         preferences: List[str],
         special_requirements: List[str],
         prep_time_max: Optional[int] = None,
-        exclusions: List[str] = None
+        exclusions: List[str] = None,
+        duration_days: Optional[int] = None
     ) -> List[Dict]:
         """
-        Generate all meals for a day - RAG doesn't batch well, so generate sequentially
-        but with proper diversity tracking
+        Generate all meals for a day in ONE OpenAI call (efficient batching).
+        Fetches candidates for all meal types, then sends to LLM for batch generation.
         """
-        meals = []
+        exclusions = exclusions or []
+        
+        # Fetch candidates for all meal types (cached per meal type)
+        all_candidates = {}
         for meal_type in meal_types:
-            recipe = await self.generate_recipe(
-                meal_type=meal_type,
-                dietary_restrictions=dietary_restrictions,
-                preferences=preferences,
-                special_requirements=special_requirements,
-                day=day,
-                prep_time_max=prep_time_max,
-                exclusions=exclusions
+            candidates = await self._get_candidates(
+                meal_type, dietary_restrictions, preferences, prep_time_max, duration_days
             )
-            recipe["meal_type"] = meal_type
-            meals.append(recipe)
-        return meals
+            if candidates:
+                # Filter used candidates
+                async with self._lock:
+                    available = self._filter_used_candidates(candidates, meal_type)
+                    if not available:
+                        self.used_candidates[meal_type] = []
+                        available = candidates
+                    random.shuffle(available)
+                    all_candidates[meal_type] = available[:self.max_prompt_candidates] or available
+            else:
+                all_candidates[meal_type] = []
+        
+        # Build candidate prompts for all meal types
+        candidate_sections = []
+        for meal_type in meal_types:
+            candidates = all_candidates.get(meal_type, [])
+            if not candidates:
+                continue
+            
+            candidate_list = []
+            for i, candidate in enumerate(candidates[:5], 1):
+                candidate_list.append(
+                    f"{i}. {candidate['title']}\n"
+                    f"   - Ingredients: {', '.join(candidate['ingredients'][:5])}\n"
+                    f"   - Nutrition: {candidate['nutrition']['calories']} cal, "
+                    f"{candidate['nutrition']['protein']}g protein, "
+                    f"{candidate['nutrition']['carbs']}g carbs, "
+                    f"{candidate['nutrition']['fat']}g fat\n"
+                    f"   - Prep time: {candidate['prep_time_minutes']} minutes"
+                )
+            
+            candidate_sections.append(f"{meal_type.upper()} candidates:\n" + "\n".join(candidate_list))
+        
+        candidate_prompt = "\n\n".join(candidate_sections) if candidate_sections else "No candidates available - generate creative recipes."
+        
+        # If no candidates at all, fallback to individual LLM-only generation
+        if not candidate_sections:
+            meals = []
+            for meal_type in meal_types:
+                recipe = await self._generate_llm_only(
+                    meal_type, dietary_restrictions, preferences, special_requirements, day, prep_time_max
+                )
+                recipe["meal_type"] = meal_type
+                meals.append(recipe)
+            return meals
+        
+        # Build requirements
+        requirements = []
+        if dietary_restrictions:
+            requirements.append(f"Dietary restrictions: {', '.join(dietary_restrictions)}")
+        if preferences:
+            requirements.append(f"Preferences: {', '.join(preferences)}")
+        if special_requirements:
+            requirements.append(f"Special requirements: {', '.join(special_requirements)}")
+        if prep_time_max:
+            requirements.append(f"Maximum preparation time: {prep_time_max} minutes")
+        if exclusions:
+            requirements.append(f"EXCLUDE: {', '.join(exclusions)} (do NOT choose recipes with these keywords)")
+        
+        requirements_str = "\n".join(requirements) if requirements else "No specific restrictions"
+        
+        meal_list = ", ".join(meal_types)
+        
+        system_prompt = """You are a chef selecting from real recipe candidates. For each meal type, choose the best candidate matching requirements and create a complete recipe using the candidate's exact nutritional data. Make each recipe unique and diverse. Return valid JSON only."""
+        
+        user_prompt = f"""Create {len(meal_types)} recipes for day {day}: {meal_list}.
+
+Available recipe candidates:
+{candidate_prompt}
+
+Requirements:
+{requirements_str}
+
+For each meal type, choose ONE candidate that best matches requirements. Use EXACT nutritional values from chosen candidates.
+
+Return JSON with a "recipes" array in this exact order: {meal_list}
+{{
+  "recipes": [
+    {{
+      "meal_type": "{meal_types[0]}",
+      "recipe_name": "Creative name based on candidate",
+      "description": "Brief description",
+      "ingredients": ["2 cups flour", "1 tbsp oil", ...],
+      "nutritional_info": {{"calories": <exact from candidate>, "protein": <exact>, "carbs": <exact>, "fat": <exact>}},
+      "preparation_time": "X mins",
+      "instructions": "Clear cooking steps",
+      "source": "AI Generated (based on Edamam recipe)"
+    }}
+  ]
+}}
+
+Critical: 
+- Return exactly {len(meal_types)} recipes, one for each meal type in order: {meal_list}
+- Use EXACT nutrition from chosen candidates
+- Make recipe names natural and appetizing
+- Ensure each meal type gets a different recipe"""
+        
+        try:
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.3
+            )
+            
+            result = json.loads(response.choices[0].message.content)
+            recipes = result.get("recipes", [])
+            
+            # Validate and format recipes
+            meals = []
+            for i, recipe in enumerate(recipes):
+                if i >= len(meal_types):
+                    break
+                
+                # Get meal_type from recipe or assign by order
+                meal_type = recipe.get("meal_type") or meal_types[i]
+                recipe["meal_type"] = meal_type
+                
+                # Validate recipe and match with candidate nutrition
+                recipe = self._validate_recipe(recipe, meal_type, all_candidates.get(meal_type, []))
+                
+                # Track used candidates
+                async with self._lock:
+                    if meal_type not in self.used_candidates:
+                        self.used_candidates[meal_type] = []
+                    # Track the selected candidate if we can identify it
+                    candidates_for_meal = all_candidates.get(meal_type, [])
+                    if candidates_for_meal:
+                        selected_title = recipe.get("recipe_name", "")
+                        for cand in candidates_for_meal:
+                            if selected_title.lower() in cand.get("title", "").lower() or cand.get("title", "").lower() in selected_title.lower():
+                                if cand.get("title"):
+                                    self.used_candidates[meal_type].append(cand["title"])
+                                break
+                
+                meals.append(recipe)
+            
+            # If LLM returned fewer recipes than meal types, generate remaining individually
+            while len(meals) < len(meal_types):
+                remaining_meal_type = meal_types[len(meals)]
+                recipe = await self.generate_recipe(
+                    meal_type=remaining_meal_type,
+                    dietary_restrictions=dietary_restrictions,
+                    preferences=preferences,
+                    special_requirements=special_requirements,
+                    day=day,
+                    prep_time_max=prep_time_max,
+                    duration_days=duration_days,
+                    exclusions=exclusions
+                )
+                recipe["meal_type"] = remaining_meal_type
+                meals.append(recipe)
+            
+            return meals
+            
+        except Exception as e:
+            print(f"RAG batch generation failed: {e}, falling back to individual generation")
+            # Fallback to individual generation
+            meals = []
+            for meal_type in meal_types:
+                recipe = await self.generate_recipe(
+                    meal_type=meal_type,
+                    dietary_restrictions=dietary_restrictions,
+                    preferences=preferences,
+                    special_requirements=special_requirements,
+                    day=day,
+                    prep_time_max=prep_time_max,
+                    duration_days=duration_days,
+                    exclusions=exclusions
+                )
+                recipe["meal_type"] = meal_type
+                meals.append(recipe)
+            return meals
     
     async def generate_recipe(
         self,

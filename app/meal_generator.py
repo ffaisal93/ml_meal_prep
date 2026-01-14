@@ -180,7 +180,8 @@ class MealPlanGenerator:
                             preferences=parsed["preferences"],
                             special_requirements=parsed["special_requirements"],
                             prep_time_max=parsed.get("prep_time_max"),
-                            exclusions=parsed.get("exclusions", [])
+                            exclusions=parsed.get("exclusions", []),
+                            duration_days=duration_days  # Pass duration_days for proper caching
                         )
                     else:
                         # Fallback to individual generation
