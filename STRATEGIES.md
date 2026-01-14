@@ -2,6 +2,14 @@
 
 This document explains how the AI Meal Planner processes queries and generates meal plans, with a detailed walkthrough using a real example.
 
+## System Overview
+
+The meal planner consists of:
+- **Query Processing**: Natural language parsing and validation
+- **Recipe Generation**: Four strategies (Fast LLM, LLM-only, RAG, Hybrid)
+- **User History**: PostgreSQL/SQLite storage for preferences and query history
+- **Smart Suggestions**: Frontend displays previous queries for quick access
+
 ## Example Query Walkthrough
 
 Let's trace how the system handles this query:
