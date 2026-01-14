@@ -132,7 +132,7 @@ Requirements:
 
 For each meal type, choose ONE candidate that best matches requirements. Use EXACT nutritional values from chosen candidates.
 
-Return JSON with a "recipes" array in this exact order: {meal_list}
+Return JSON with a "recipes" array:
 {{
   "recipes": [
     {{
@@ -148,11 +148,7 @@ Return JSON with a "recipes" array in this exact order: {meal_list}
   ]
 }}
 
-Critical: 
-- Return exactly {len(meal_types)} recipes, one for each meal type in order: {meal_list}
-- Use EXACT nutrition from chosen candidates
-- Make recipe names natural and appetizing
-- Ensure each meal type gets a different recipe"""
+Critical: Use EXACT nutrition from chosen candidates. Make recipe names natural and appetizing. Ensure each meal type gets a different recipe."""
         
         try:
             response = self.client.chat.completions.create(

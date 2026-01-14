@@ -49,42 +49,60 @@ class HybridStrategy(RecipeGenerationStrategy):
         preferences: List[str],
         special_requirements: List[str],
         prep_time_max: Optional[int] = None,
-        exclusions: List[str] = None
+        exclusions: List[str] = None,
+        duration_days: Optional[int] = None
     ) -> List[Dict]:
         """
-        Generate all meals for a day using hybrid approach
-        Mix RAG and LLM-only for diversity
+        Generate all meals for a day using hybrid approach with efficient batching.
+        Groups meals by strategy (RAG vs LLM-only) and batches them together.
         """
-        meals = []
-        for i, meal_type in enumerate(meal_types):
-            # Determine strategy per meal
+        # Determine which meals use RAG and which use LLM-only
+        rag_meal_types = []
+        llm_meal_types = []
+        meal_strategy_map = {}  # Map meal_type to strategy
+        
+        for meal_type in meal_types:
             meal_type_idx = {"breakfast": 0, "lunch": 1, "dinner": 2, "snack": 3}.get(meal_type.lower(), 0)
             combined_index = (day * 10 + meal_type_idx) % 10
             use_rag = combined_index < (self.rag_ratio * 10)
             
             if use_rag:
-                recipe = await self.rag_strategy.generate_recipe(
-                    meal_type=meal_type,
-                    dietary_restrictions=dietary_restrictions,
-                    preferences=preferences,
-                    special_requirements=special_requirements,
-                    day=day,
-                    prep_time_max=prep_time_max,
-                    exclusions=exclusions
-                )
+                rag_meal_types.append(meal_type)
+                meal_strategy_map[meal_type] = "rag"
             else:
-                recipe = await self.llm_strategy.generate_recipe(
-                    meal_type=meal_type,
-                    dietary_restrictions=dietary_restrictions,
-                    preferences=preferences,
-                    special_requirements=special_requirements,
-                    day=day,
-                    prep_time_max=prep_time_max,
-                    exclusions=exclusions
-                )
-            
-            recipe["meal_type"] = meal_type
-            meals.append(recipe)
+                llm_meal_types.append(meal_type)
+                meal_strategy_map[meal_type] = "llm"
+        
+        # Generate RAG meals in batch (if any)
+        rag_meals = []
+        if rag_meal_types:
+            rag_meals = await self.rag_strategy.generate_day_meals(
+                day=day,
+                meal_types=rag_meal_types,
+                dietary_restrictions=dietary_restrictions,
+                preferences=preferences,
+                special_requirements=special_requirements,
+                prep_time_max=prep_time_max,
+                exclusions=exclusions,
+                duration_days=duration_days
+            )
+        
+        # Generate LLM-only meals in batch (if any)
+        llm_meals = []
+        if llm_meal_types:
+            llm_meals = await self.llm_strategy.generate_day_meals(
+                day=day,
+                meal_types=llm_meal_types,
+                dietary_restrictions=dietary_restrictions,
+                preferences=preferences,
+                special_requirements=special_requirements,
+                prep_time_max=prep_time_max,
+                exclusions=exclusions
+            )
+        
+        # Combine meals in original order
+        all_meals = {meal["meal_type"]: meal for meal in rag_meals + llm_meals}
+        meals = [all_meals[meal_type] for meal_type in meal_types if meal_type in all_meals]
         
         return meals
     

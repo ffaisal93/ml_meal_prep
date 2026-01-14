@@ -18,7 +18,7 @@ Each strategy implements the same interface but uses different approaches:
 | fast_llm | Fastest (40s) | Minimal | 2 OpenAI | Quick testing |
 | llm_only | Fast (60s) | Detailed | 8 OpenAI | Creativity |
 | rag | Medium (60-90s) | Detailed | 3 Edamam + 8 OpenAI | Real recipes |
-| hybrid | Slower (135s) | Balanced | 3-9 Edamam + 8-22 OpenAI | Balance |
+| hybrid | Slower (135s) | Balanced | 3 Edamam + 15 OpenAI | Balance |
 
 ## Detailed Breakdown
 
@@ -121,14 +121,20 @@ Each strategy implements the same interface but uses different approaches:
 **Speed**: ~135s for 7-day plan (6-7s per meal)
 
 **How it works**:
-1. For 70% of meals: Uses RAG strategy
-2. For 30% of meals: Uses LLM-only strategy  
-3. Deterministic selection based on day/meal combination
+1. Groups meals by strategy (RAG vs LLM-only) per day
+2. Batches RAG meals together (one OpenAI call per day)
+3. Batches LLM-only meals together (one OpenAI call per day)
+4. Deterministic selection based on day/meal combination
+5. Combines results in original meal order
 
-**API calls for 7-day plan**:
-- **Edamam calls**: 3-9 (depends on RAG ratio, cached per meal type)
-- **OpenAI calls**: 8-22 (depends on RAG ratio)
-- **Total**: 11-31 external API calls
+**API calls for 7-day plan** (with 70% RAG ratio):
+- **Edamam calls**: 3 (one per meal type, cached - same as RAG)
+- **OpenAI calls**: 15 (1 parse + 7 RAG batches + 7 LLM-only batches)
+  - RAG meals: Batched per day (7 calls)
+  - LLM-only meals: Batched per day (7 calls)
+- **Total**: 18 external API calls
+
+**Note**: Uses efficient batching - groups RAG and LLM-only meals separately, then batches each group per day.
 
 **Output quality**: Mix of real and AI-generated
 - Variety in both approach and content
@@ -192,7 +198,7 @@ Tested locally with 7-day plans:
 - fast_llm: 40s (2 OpenAI calls: 1 parse + 1 full plan)
 - llm_only: 60s (8 OpenAI calls: 1 parse + 7 day batches)
 - rag: 60-90s (3 Edamam calls + 8 OpenAI calls: 1 parse + 7 day batches)
-- hybrid: 135s (mix of RAG and LLM-only, depends on ratio)
+- hybrid: 135s (3 Edamam calls + 15 OpenAI calls: 1 parse + 7 RAG batches + 7 LLM batches)
 
 **Note on RAG caching**: Edamam calls are cached per meal type. For a 7-day plan:
 - First day: 3 Edamam calls (breakfast, lunch, dinner)
