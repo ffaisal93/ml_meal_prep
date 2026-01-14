@@ -27,24 +27,24 @@ Ask for a meal plan in plain English, and the system generates complete recipes 
 
 ### 1. Clone and Setup
 
-```bash
+   ```bash
 # Clone the repository
 git clone https://github.com/ffaisal93/ml_meal_prep.git
-cd ml_meal_prep
+   cd ml_meal_prep
 
 # Create virtual environment
 python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 # Install dependencies
-pip install -r requirements.txt
-```
+   pip install -r requirements.txt
+   ```
 
 ### 2. Configure Environment
 
 Create a `.env` file in the project root:
 
-```bash
+   ```bash
 # Required
 OPENAI_API_KEY=your_openai_api_key_here
 
@@ -65,14 +65,14 @@ CACHE_TTL_SECONDS=3600
 
 ### 3. Run the API
 
-```bash
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
+   ```bash
+   uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+   ```
 
 The API will be available at `http://localhost:8000`
 
 **Test it:**
-```bash
+   ```bash
 # Health check
 curl http://localhost:8000/health
 
@@ -87,7 +87,7 @@ Open `http://localhost:8000/docs` in your browser for Swagger UI.
 
 ### 4. Use the Frontend
 
-```bash
+   ```bash
 # In a new terminal (keep the API running)
 cd frontend
 python3 -m http.server 8080
@@ -200,6 +200,29 @@ The system supports four different generation strategies. Choose based on your n
 - 10 requests per minute per IP
 - 100 requests per minute system-wide
 
+### Get User Preferences
+
+**Endpoint:** `GET /api/user/{user_id}/preferences?limit=10`
+
+**Response:**
+```json
+{
+  "user_id": "user-123",
+  "preferences": [
+    {
+      "id": 1,
+      "query": "I need a week of budget-friendly vegetarian meals",
+      "meal_plan_id": "uuid",
+      "dietary_restrictions": ["vegetarian"],
+      "preferences": [],
+      "special_requirements": ["budget-friendly"],
+      "created_at": "2026-01-14T10:30:00"
+    }
+    // ... up to 10 most recent queries
+  ]
+}
+```
+
 **Full API documentation:** Visit `/docs` when the server is running for interactive Swagger UI.
 
 ## Deployment
@@ -208,22 +231,36 @@ The system supports four different generation strategies. Choose based on your n
 
 1. **Create Railway account** at [railway.app](https://railway.app)
 
-2. **Deploy from GitHub:**
-   - Click "New Project" → "Deploy from GitHub repo"
+2. **Add PostgreSQL database:**
+   - In your Railway project, click "New" → "Database" → "Add PostgreSQL"
+   - Railway automatically creates the database and sets `DATABASE_URL` environment variable
+   - This enables user preference storage and query history
+
+3. **Deploy from GitHub:**
+   - Click "New" → "Deploy from GitHub repo"
    - Select `ml_meal_prep` repository
    - Railway auto-detects Python and uses `Procfile`
 
-3. **Add environment variables:**
+4. **Add environment variables:**
    ```
    OPENAI_API_KEY=your_key
    EDAMAM_APP_ID=your_id (optional)
    EDAMAM_APP_KEY=your_key (optional)
    RECIPE_GENERATION_MODE=llm_only
+   DATABASE_URL=postgresql://... (auto-set by Railway when you add PostgreSQL)
    ```
 
-4. **Get your API URL:**
+5. **Get your API URL:**
    - Railway provides: `https://your-app.railway.app`
    - Test: `https://your-app.railway.app/health`
+
+**User History Feature:**
+- PostgreSQL stores user preferences and query history
+- Each user gets a unique ID (auto-generated in browser via localStorage)
+- API endpoint: `GET /api/user/{user_id}/preferences?limit=10`
+- Frontend shows smart suggestions based on previous queries
+- Locally: Uses SQLite (no setup needed)
+- Production: Uses PostgreSQL (Railway auto-configures)
 
 ### Deploy Frontend (GitHub Pages)
 
@@ -359,9 +396,14 @@ This project implements several bonus features from the assignment:
 - **Graceful**: Returns 429 with retry-after header
 
 ### 5. User Preference Storage
-- **Database**: SQLAlchemy (PostgreSQL in production, SQLite locally)
-- **User IDs**: Auto-generated per browser (localStorage)
-- **History**: Stores queries and preferences for suggestions
+- **Database**: SQLAlchemy ORM with dual support
+  - **Production (Railway)**: PostgreSQL (auto-configured via DATABASE_URL)
+  - **Local development**: SQLite (no setup needed)
+- **User IDs**: Auto-generated per browser (localStorage, no signup required)
+- **History**: Stores up to 10 most recent queries per user
+- **Smart suggestions**: Frontend displays previous queries as clickable chips
+- **API endpoint**: `GET /api/user/{user_id}/preferences?limit=10`
+- **Privacy**: User data isolated by user_id, no cross-user access
 
 ### 6. Unit Tests
 - **5 test files**: Edge cases, strategies, validation, generation, performance
