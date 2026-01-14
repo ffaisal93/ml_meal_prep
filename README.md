@@ -49,8 +49,8 @@ An intelligent meal planning system that generates personalized meal plans from 
 │                                                                  │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐      │
 │  │Fast LLM  │  │LLM-Only  │  │   RAG    │  │ Hybrid   │      │
-│  │ 2 calls  │  │ 8 calls  │  │ 11 calls │  │ 12-19    │      │
-│  │ 40s      │  │ 60s      │  │ 60-90s   │  │ 135s     │      │
+│  │ 2 calls  │  │ 8 calls  │  │ 11 calls │  │ 11 calls │      │
+│  │ 40s      │  │ 60s      │  │ 60-90s   │  │ 60-90s   │      │
 │  └──────────┘  └──────────┘  └──────────┘  └──────────┘      │
 └────────────────────────┬────────────────────────────────────────┘
                          │
@@ -185,7 +185,7 @@ The system supports four different generation strategies. Choose based on your n
 | **fast_llm** | Fastest (40s) | Minimal | 2 OpenAI | Quick testing, demos |
 | **llm_only** | Fast (60s) | Detailed | 8 OpenAI | Creative recipes, no Edamam needed |
 | **rag** | Medium (60-90s) | Detailed | 3 Edamam + 8 OpenAI | Real recipes, accurate nutrition |
-| **hybrid** | Slower (135s) | Balanced | 3 Edamam + 8-15 OpenAI | Mix of real and creative |
+| **hybrid** | Medium (60-90s) | Balanced | 3 Edamam + 8 OpenAI | Mix of real and creative (70% RAG, 30% LLM) |
 
 **Switch strategies:**
 - In `.env`: Set `RECIPE_GENERATION_MODE=llm_only`
