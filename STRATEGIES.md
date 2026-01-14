@@ -268,7 +268,7 @@ Critical: Use EXACT nutrition from chosen candidates. Make recipe names natural 
 **What happens:**
 Pure AI generation without Edamam candidates. Uses variety hints for diversity.
 
-**Variety Hint System:**
+**Variety Hint System (LLM-Only Strategy ONLY):**
 - Day 1: "Mediterranean style"
 - Day 2: "Asian fusion style"
 - Day 3: "Italian style"
@@ -281,6 +281,7 @@ Pure AI generation without Edamam candidates. Uses variety hints for diversity.
 - Randomized from a pool of 15+ cuisines
 - Filtered to exclude user-specified exclusions (e.g., "not Mediterranean")
 - Only suggestions (LLM can deviate if needed)
+- **Not used in RAG, Fast LLM, or Hybrid strategies** (RAG uses candidate diversity, Fast LLM uses single call, Hybrid uses both approaches)
 
 **OpenAI API Call #2 (Day 1 Batch):**
 
@@ -491,11 +492,11 @@ Be concise but realistic. All 21 meals should be different.
 - **Fast mode**: 2 calls for entire 7-day plan
 
 ### 2. Diversity Protection
-- **Variety hints**: Day-based cuisine suggestions (randomized, filtered by exclusions)
-- **Candidate filtering**: Tracks used Edamam recipes, filters duplicates
-- **Recipe tracking**: Thread-safe dictionary prevents repetition
-- **Shuffle candidates**: Randomizes order before LLM selection
-- **Diversity validation**: Tests ensure >80% unique meals
+- **Variety hints**: Day-based cuisine suggestions (LLM-only strategy only, randomized, filtered by exclusions)
+- **Candidate filtering**: Tracks used Edamam recipes, filters duplicates (RAG and Hybrid strategies)
+- **Recipe tracking**: Thread-safe dictionary prevents repetition (all strategies)
+- **Shuffle candidates**: Randomizes order before LLM selection (RAG and Hybrid strategies)
+- **Diversity validation**: Tests ensure >80% unique meals (all strategies)
 
 ### 3. Data Validation
 - **Pydantic models**: All inputs/outputs validated
