@@ -2,6 +2,8 @@
 
 An intelligent meal planning system that generates personalized meal plans from natural language queries. Built with FastAPI, OpenAI GPT-4o-mini, and optional Edamam API integration for real recipe data.
 
+**🚀 Live Demo:** [https://fahimfaisal.info/ml_meal_prep/](https://fahimfaisal.info/ml_meal_prep/)
+
 ## Table of Contents
 
 - [What It Does](#what-it-does)
