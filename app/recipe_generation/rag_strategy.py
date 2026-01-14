@@ -316,6 +316,20 @@ Critical: Use EXACT nutrition from chosen candidate. Make recipe name natural an
             recipe["nutritional_info"] = {"calories": 400, "protein": 20.0, "carbs": 50.0, "fat": 10.0}
         if "preparation_time" not in recipe:
             recipe["preparation_time"] = "30 mins"
+        else:
+            # Validate prep time is realistic (not 0.0 or empty)
+            prep_time_str = str(recipe.get("preparation_time", "30 mins")).lower()
+            # Extract number from string like "0 mins", "0.0 mins", etc.
+            import re
+            time_match = re.search(r'(\d+\.?\d*)', prep_time_str)
+            if time_match:
+                prep_time_num = float(time_match.group(1))
+                if prep_time_num <= 0 or prep_time_num < 5:
+                    # Default to reasonable prep time based on meal type
+                    default_times = {"breakfast": 15, "lunch": 25, "dinner": 30, "snack": 10}
+                    recipe["preparation_time"] = f"{default_times.get(meal_type.lower(), 20)} mins"
+            elif not prep_time_str or prep_time_str.strip() == "":
+                recipe["preparation_time"] = "30 mins"
         if "instructions" not in recipe:
             recipe["instructions"] = "Follow standard cooking procedures."
         elif isinstance(recipe["instructions"], list):
@@ -342,12 +356,19 @@ Critical: Use EXACT nutrition from chosen candidate. Make recipe name natural an
     
     def _candidate_to_recipe(self, candidate: Dict, meal_type: str) -> Dict:
         """Convert candidate directly to recipe format"""
+        # Ensure prep time is realistic (minimum 10 minutes)
+        prep_time = candidate.get('prep_time_minutes', 0)
+        if prep_time <= 0 or prep_time < 10:
+            # Default to reasonable prep time based on meal type
+            default_times = {"breakfast": 15, "lunch": 25, "dinner": 30, "snack": 10}
+            prep_time = default_times.get(meal_type.lower(), 20)
+        
         return {
             "recipe_name": candidate["title"],
             "description": f"A {meal_type} recipe from {candidate['source']}",
             "ingredients": [f"1 {ing}" for ing in candidate["ingredients"]],
             "nutritional_info": candidate["nutrition"],
-            "preparation_time": f"{candidate['prep_time_minutes']} mins",
+            "preparation_time": f"{prep_time} mins",
             "instructions": f"See full recipe at: {candidate['url']}",
             "source": f"Edamam: {candidate['source']}",
             "meal_type": meal_type

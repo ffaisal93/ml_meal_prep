@@ -150,7 +150,7 @@ class RecipeRetriever:
                             "carbs": round(recipe.get("totalNutrients", {}).get("CHOCDF", {}).get("quantity", 0) / recipe.get("yield", 1), 1),
                             "fat": round(recipe.get("totalNutrients", {}).get("FAT", {}).get("quantity", 0) / recipe.get("yield", 1), 1),
                         },
-                        "prep_time_minutes": recipe.get("totalTime", 0),
+                        "prep_time_minutes": max(recipe.get("totalTime", 0), 10),  # Minimum 10 minutes if not provided
                         "servings": recipe.get("yield", 1),
                         "health_labels": recipe.get("healthLabels", []),
                         "diet_labels": recipe.get("dietLabels", [])
