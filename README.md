@@ -539,8 +539,7 @@ Given more time, here's a thoughtful plan for expanding the system:
 #### 1. Enhanced Evaluation Framework
 
 **API Call Tracking:**
-- Instrument all API calls with timing and cost metrics
-- Track OpenAI token usage (input/output separately)
+- API calls cost metrics
 - Monitor Edamam API usage and cache hit rates
 - Generate cost reports per strategy per query
 - Compare actual costs vs theoretical estimates
@@ -557,13 +556,10 @@ Given more time, here's a thoughtful plan for expanding the system:
 - Instruction clarity (step count, detail level)
 - Ingredient availability (common vs exotic ingredients)
 - Preparation time accuracy (compare estimated vs typical actual times)
-- User satisfaction simulation (synthetic user feedback)
 
 **Performance Benchmarks:**
 - Latency percentiles (p50, p95, p99)
 - Throughput testing (concurrent requests)
-- Memory usage profiling
-- Database query performance
 - Cache effectiveness (hit rate, memory usage)
 
 **Automated Testing:**
@@ -609,7 +605,6 @@ Given more time, here's a thoughtful plan for expanding the system:
 
 **Feature Enhancements:**
 - **Meal prep mode**: Batch cooking instructions for multiple days
-- **Shopping list generation**: Aggregate ingredients, group by store section
 - **Nutritional targets**: Hit specific calorie/macro goals
 - **Dietary scoring**: Rate how well plan matches dietary goals
 - **Recipe variations**: Generate alternatives for disliked meals
