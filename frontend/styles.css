@@ -379,29 +379,29 @@ main {
 }
 
 .warning-banner {
-    background: linear-gradient(135deg, rgba(255, 152, 0, 0.95), rgba(255, 193, 7, 0.95));
-    border: 2px solid rgba(255, 152, 0, 1);
+    background: linear-gradient(135deg, #ff6b00, #ff8c00);
+    border: 2px solid #ff6b00;
     border-radius: 12px;
     padding: 16px 20px;
     margin: 20px 0;
     display: flex;
     align-items: center;
     gap: 12px;
-    box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
+    box-shadow: 0 4px 12px rgba(255, 107, 0, 0.4);
 }
 
 .warning-icon {
     font-size: 1.5rem;
     flex-shrink: 0;
-    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
 }
 
 .warning-banner span:last-child {
-    color: rgba(0, 0, 0, 0.9);
+    color: #ffffff;
     font-size: 0.95rem;
     line-height: 1.5;
-    font-weight: 500;
-    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.3);
+    font-weight: 600;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 .mode-badge {

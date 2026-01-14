@@ -317,9 +317,9 @@ Critical: Use EXACT nutrition from chosen candidate. Make recipe name natural an
         if "preparation_time" not in recipe:
             recipe["preparation_time"] = "30 mins"
         else:
-            # Validate prep time is realistic (not 0.0 or empty)
+            # Validate prep time is realistic (not 0.0 or empty) and format as integer
             prep_time_str = str(recipe.get("preparation_time", "30 mins")).lower()
-            # Extract number from string like "0 mins", "0.0 mins", etc.
+            # Extract number from string like "0 mins", "0.0 mins", "30.0 mins", etc.
             import re
             time_match = re.search(r'(\d+\.?\d*)', prep_time_str)
             if time_match:
@@ -328,6 +328,9 @@ Critical: Use EXACT nutrition from chosen candidate. Make recipe name natural an
                     # Default to reasonable prep time based on meal type
                     default_times = {"breakfast": 15, "lunch": 25, "dinner": 30, "snack": 10}
                     recipe["preparation_time"] = f"{default_times.get(meal_type.lower(), 20)} mins"
+                else:
+                    # Format as integer (no decimals)
+                    recipe["preparation_time"] = f"{int(prep_time_num)} mins"
             elif not prep_time_str or prep_time_str.strip() == "":
                 recipe["preparation_time"] = "30 mins"
         if "instructions" not in recipe:
@@ -368,7 +371,7 @@ Critical: Use EXACT nutrition from chosen candidate. Make recipe name natural an
             "description": f"A {meal_type} recipe from {candidate['source']}",
             "ingredients": [f"1 {ing}" for ing in candidate["ingredients"]],
             "nutritional_info": candidate["nutrition"],
-            "preparation_time": f"{prep_time} mins",
+            "preparation_time": f"{int(prep_time)} mins",  # Ensure integer, no decimals
             "instructions": f"See full recipe at: {candidate['url']}",
             "source": f"Edamam: {candidate['source']}",
             "meal_type": meal_type

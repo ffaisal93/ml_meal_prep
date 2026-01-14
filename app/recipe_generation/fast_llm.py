@@ -162,6 +162,14 @@ Generate {duration_days} days. {detail_level} Each recipe different. Valid JSON 
             recipe["nutritional_info"] = {"calories": 400, "protein": 20.0, "carbs": 45.0, "fat": 10.0}
         if "preparation_time" not in recipe:
             recipe["preparation_time"] = "15 mins"
+        else:
+            # Format prep time as integer (no decimals)
+            import re
+            prep_time_str = str(recipe.get("preparation_time", "15 mins")).lower()
+            time_match = re.search(r'(\d+\.?\d*)', prep_time_str)
+            if time_match:
+                prep_time_num = float(time_match.group(1))
+                recipe["preparation_time"] = f"{int(prep_time_num)} mins"
         if "instructions" not in recipe:
             recipe["instructions"] = "Prepare ingredients and cook."
         if "source" not in recipe:

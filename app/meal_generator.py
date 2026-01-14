@@ -93,10 +93,10 @@ class MealPlanGenerator:
                 removed_items.append(remove_item)
                 kept_items.append(keep_item)
         
-        # Create natural language warning
+        # Create natural language warning (deduplicate items)
         if removed_items and kept_items:
-            removed_str = ", ".join(removed_items)
-            kept_str = ", ".join(kept_items)
+            removed_str = ", ".join(list(set(removed_items)))  # Remove duplicates
+            kept_str = ", ".join(list(set(kept_items)))  # Remove duplicates
             warning = f"I noticed you requested both {removed_str} and {kept_str}, which conflict. I've created a {kept_str} meal plan for you."
         else:
             warning = "I've resolved some conflicting requirements in your request."
