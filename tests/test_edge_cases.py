@@ -111,6 +111,36 @@ class TestAssignmentEdgeCases:
         parsed = self.parser.parse(query)
         
         assert parsed["duration_days"] == 7
+    
+    def test_week_budget_friendly(self):
+        """Test 'week of budget-friendly meals' query"""
+        query = "I need a week of budget-friendly meals"
+        parsed = self.parser.parse(query)
+        
+        assert parsed["duration_days"] == 7
+        assert "budget-friendly" in [s.lower() for s in parsed.get("special_requirements", [])]
+    
+    @pytest.mark.asyncio
+    async def test_week_budget_friendly_generation(self):
+        """Test generation of week-long budget-friendly meal plan"""
+        query = "I need a week of budget-friendly meals"
+        result = await self.generator.generate(query)
+        
+        assert result["duration_days"] == 7
+        assert len(result["meal_plan"]) == 7
+        assert "meal_plan" in result
+        assert "summary" in result
+    
+    def test_exclusions_parsing(self):
+        """Test parsing of exclusions like 'not Mediterranean'"""
+        query = "2-day vegetarian meal plan not mediterranean"
+        parsed = self.parser.parse(query)
+        
+        assert parsed["duration_days"] == 2
+        assert "vegetarian" in [r.lower() for r in parsed.get("dietary_restrictions", [])]
+        # Exclusions should be extracted
+        exclusions = parsed.get("exclusions", [])
+        assert len(exclusions) > 0 or "mediterranean" in str(exclusions).lower()
 
 
 if __name__ == "__main__":

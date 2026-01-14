@@ -133,6 +133,32 @@ class TestMealPlanGenerator:
         
         # Warning should be user-friendly
         assert "contradictory" not in result["warning"].lower() or "conflict" in result["warning"].lower()
+    
+    @pytest.mark.asyncio
+    async def test_fallback_meal_plan(self):
+        """Test that fallback meal plan is generated on errors"""
+        # Force an error by using invalid strategy mode
+        generator = MealPlanGenerator(strategy_mode="llm_only")
+        
+        # Mock a failure scenario
+        with patch.object(generator.recipe_service, 'generate_recipe', 
+                         side_effect=Exception("Test error")):
+            result = await generator.generate("test query")
+            
+            # Should still return a meal plan (fallback)
+            assert "meal_plan" in result
+            assert len(result["meal_plan"]) > 0
+            assert "warning" in result
+            assert result["warning"] is not None
+    
+    @pytest.mark.asyncio
+    async def test_week_query_generation(self):
+        """Test that 'week' query generates 7-day plan"""
+        query = "I need a week of budget-friendly meals"
+        result = await self.generator.generate(query)
+        
+        assert result["duration_days"] == 7
+        assert len(result["meal_plan"]) == 7
 
 
 if __name__ == "__main__":
