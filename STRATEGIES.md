@@ -536,6 +536,17 @@ Be concise but realistic. All 21 meals should be different.
 - **Thread-safe**: Uses locks for concurrent access
 - **Cache hits**: Days 2-7 use cached Edamam candidates
 
+### 8. User History & Preferences
+- **Database**: SQLAlchemy ORM with dual support
+  - Production: PostgreSQL (Railway auto-configures via DATABASE_URL)
+  - Local: SQLite (auto-created, no setup needed)
+- **Storage**: Last 10 queries per user with parsed requirements
+- **User IDs**: Auto-generated in browser (localStorage, no signup)
+- **API endpoint**: `GET /api/user/{user_id}/preferences?limit=10`
+- **Frontend integration**: Smart suggestions displayed as clickable chips
+- **Privacy**: User data isolated by user_id
+- **Schema**: Stores query text, meal_plan_id, dietary restrictions, preferences, special requirements, timestamp
+
 ---
 
 ## Strategy Comparison Table
@@ -573,12 +584,14 @@ Or select in frontend dropdown.
 The system processes queries through a pipeline:
 1. **Parse** → Extract structured requirements (OpenAI)
 2. **Validate** → Check constraints, resolve contradictions
-3. **Generate** → Use selected strategy (RAG/LLM/Fast/Hybrid)
-4. **Validate** → Check nutrition, diversity, format
-5. **Return** → Complete meal plan with summary
+3. **Store** → Save user query to database (if user_id provided)
+4. **Generate** → Use selected strategy (RAG/LLM/Fast/Hybrid)
+5. **Validate** → Check nutrition, diversity, format
+6. **Return** → Complete meal plan with summary
+7. **Update** → Save meal_plan_id to user history
 
 All strategies prioritize:
 - **Cost efficiency** (batch generation, caching, GPT-4o-mini)
 - **Diversity** (variety hints, candidate filtering, tracking)
 - **Reliability** (fallback plans, auto-correction, validation)
-- **User experience** (natural warnings, always returns a plan)
+- **User experience** (natural warnings, always returns a plan, smart suggestions from history)
