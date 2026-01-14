@@ -15,10 +15,10 @@ Each strategy implements the same interface but uses different approaches:
 
 | Strategy | Speed | Detail | API Calls (7-day) | Best For |
 |----------|-------|--------|-------------------|----------|
-| fast_llm | Fastest (40s) | Minimal | 2 | Quick testing |
-| llm_only | Fast (60s) | Detailed | 8 | Creativity |
-| rag | Medium (60s) | Detailed | 22 | Real recipes |
-| hybrid | Slower (135s) | Balanced | 8-22 | Balance |
+| fast_llm | Fastest (40s) | Minimal | 2 OpenAI | Quick testing |
+| llm_only | Fast (60s) | Detailed | 8 OpenAI | Creativity |
+| rag | Medium (60-90s) | Detailed | 3 Edamam + 22 OpenAI | Real recipes |
+| hybrid | Slower (135s) | Balanced | 3-9 Edamam + 8-22 OpenAI | Balance |
 
 ## Detailed Breakdown
 
@@ -78,15 +78,25 @@ Each strategy implements the same interface but uses different approaches:
 
 **What it does**: Fetches real recipes from Edamam, LLM refines them
 
-**Speed**: ~60s for 7-day plan (3-4s per meal)
+**Speed**: ~60-90s for 7-day plan (3-4s per meal)
 
 **How it works**:
-1. Queries Edamam API for recipe candidates
-2. Filters by dietary restrictions
+1. For each meal: Queries Edamam API for recipe candidates (cached per meal type)
+2. Filters by dietary restrictions and exclusions
 3. LLM selects best match and formats it
-4. Uses exact nutrition from database
+4. Uses exact nutrition from Edamam database
 
-**API calls**: 22 (1 parse + 21 individual)
+**API calls for 7-day plan**:
+- **Edamam calls**: 3 (one per meal type: breakfast, lunch, dinner)
+  - Day 1: 3 calls (cache misses for each meal type)
+  - Days 2-7: 0 calls (uses cache)
+- **OpenAI calls**: 22 (1 for query parsing + 21 for recipe generation, one per meal)
+- **Total external calls**: 25
+
+**Caching behavior**:
+- Candidates cached per meal type using key: `{meal_type}|{dietary_restrictions}|{prep_time_max}`
+- Cache TTL: 1 hour (configurable)
+- Same meal type with same restrictions = cache hit (no Edamam call)
 
 **Output quality**: Real recipes with verified data
 - Recipe names: Actual dish names
@@ -99,9 +109,9 @@ Each strategy implements the same interface but uses different approaches:
 **Requirements**: Edamam API credentials (free tier available)
 
 **Design choices implemented**:
-- Caching: TTLCache reduces redundant Edamam calls by 60-70%
+- Caching: TTLCache eliminates redundant Edamam calls (3 calls instead of 21)
 - Nutritional validation: Uses real database values
-- Diversity: Filters used candidates
+- Diversity: Filters used candidates to avoid repetition
 
 ### hybrid
 
@@ -114,7 +124,10 @@ Each strategy implements the same interface but uses different approaches:
 2. For 30% of meals: Uses LLM-only strategy  
 3. Deterministic selection based on day/meal combination
 
-**API calls**: 8-22 (depends on RAG ratio)
+**API calls for 7-day plan**:
+- **Edamam calls**: 3-9 (depends on RAG ratio, cached per meal type)
+- **OpenAI calls**: 8-22 (depends on RAG ratio)
+- **Total**: 11-31 external API calls
 
 **Output quality**: Mix of real and AI-generated
 - Variety in both approach and content
@@ -175,9 +188,14 @@ Or select in frontend dropdown.
 ## Real-World Performance
 
 Tested locally with 7-day plans:
-- fast_llm: 40s (1 API call for all meals)
-- llm_only: 60s (7 API calls, one per day)
-- rag: 60-90s (21 API calls + Edamam fetches)
-- hybrid: 135s (mix of approaches)
+- fast_llm: 40s (2 OpenAI calls: 1 parse + 1 full plan)
+- llm_only: 60s (8 OpenAI calls: 1 parse + 7 day batches)
+- rag: 60-90s (3 Edamam calls + 22 OpenAI calls: 1 parse + 21 recipes)
+- hybrid: 135s (mix of RAG and LLM-only, depends on ratio)
+
+**Note on RAG caching**: Edamam calls are cached per meal type. For a 7-day plan:
+- First day: 3 Edamam calls (breakfast, lunch, dinner)
+- Remaining days: 0 Edamam calls (uses cache)
+- Total: 3 Edamam calls (not 21)
 
 All times include query parsing, generation, and validation.
