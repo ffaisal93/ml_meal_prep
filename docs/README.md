@@ -1,48 +1,35 @@
 # Documentation Index
 
-Complete documentation for the Meal Planner API.
+Complete documentation for the AI Meal Planner.
 
-## Getting Started
-- **[Quick Start Guide](QUICK_START.md)** - Get up and running in minutes
-- **[API Documentation](API.md)** - Complete API reference
-- **[Testing Guide](TESTING.md)** - Local testing instructions
+## Core Documentation
 
-## Deployment
+- **[Main README](../README.md)** - Project overview, quick start, deployment
+- **[STRATEGIES.md](../STRATEGIES.md)** - Complete information flow walkthrough with examples
+- **[API Documentation](API.md)** - Complete API reference with examples
+- **[Testing Guide](TESTING.md)** - Local testing and unit tests
 - **[Deployment Guide](DEPLOYMENT.md)** - Railway and GitHub Pages deployment
-- **[Deployment Checklist](DEPLOYMENT_CHECKLIST.md)** - Pre-deployment verification steps
-- **[Update Deployment](UPDATE_DEPLOYMENT.md)** - Update deployed services
 
-## Development
-- **[GitHub Setup Guide](GITHUB_SETUP.md)** - Push code to GitHub
-- **[Pre-Commit Checklist](PRE_COMMIT_CHECKLIST.md)** - Verify before committing
+## Specialized Guides
 
-## Database
-- **[Railway Database Setup](RAILWAY_DATABASE_SETUP.md)** - PostgreSQL setup on Railway
-- **[Connect Database to API](RAILWAY_CONNECT_DATABASE.md)** - Connect database to API service
-- **[Check Database](CHECK_DATABASE.md)** - Verify database status
-- **[Database Benefits](DATABASE_BENEFITS.md)** - User preferences and personalization
-
-## Recipe Generation
-- **[Recipe Generation Strategies](RECIPE_GENERATION_STRATEGIES.md)** - LLM-only, RAG, Hybrid, and Fast LLM modes
-- **[Railway Recipe Strategies](RAILWAY_RECIPE_STRATEGIES.md)** - Strategy configuration on Railway
-- **[Diversity Strategy](DIVERSITY_STRATEGY.md)** - How variety hints ensure diverse meal plans
-
-## Technical Details
-- **[Validation Flow](VALIDATION_FLOW.md)** - Query parsing and validation logic
+- **[Recipe Generation Strategies](RECIPE_GENERATION_STRATEGIES.md)** - Detailed strategy comparison (LLM-only, RAG, Hybrid, Fast LLM)
+- **[Diversity Strategy](DIVERSITY_STRATEGY.md)** - How variety hints and candidate filtering ensure diverse meal plans
 
 ## Quick Links
 
-- **Main README**: Project overview and features
-- **API Documentation**: [API.md](API.md) - Complete API reference
 - **Interactive API Docs**: Visit `/docs` endpoint when API is running (Swagger UI)
-- **Frontend README**: `frontend/README.md`
-- **Evaluation**: `evaluation/README.md`
+- **Frontend**: `frontend/README.md` - Web interface documentation
+- **Evaluation**: `evaluation/README.md` - Diversity evaluation framework
 
 ## Recommended Reading Order
 
-1. **[Quick Start Guide](QUICK_START.md)** - Setup and run locally
-2. **[Testing Guide](TESTING.md)** - Run tests
-3. **[Deployment Guide](DEPLOYMENT.md)** - Deploy to Railway/GitHub Pages
-4. **[Recipe Generation Strategies](RECIPE_GENERATION_STRATEGIES.md)** - Understand generation modes
-5. **[Update Deployment](UPDATE_DEPLOYMENT.md)** - Make changes to deployed services
+For new users:
+1. **[Main README](../README.md)** - Start here for setup and deployment
+2. **[Testing Guide](TESTING.md)** - Run tests locally
+3. **[Deployment Guide](DEPLOYMENT.md)** - Deploy to production
+
+For understanding the system:
+1. **[STRATEGIES.md](../STRATEGIES.md)** - See complete information flow
+2. **[Recipe Generation Strategies](RECIPE_GENERATION_STRATEGIES.md)** - Compare all 4 strategies
+3. **[API Documentation](API.md)** - Explore all endpoints
 
