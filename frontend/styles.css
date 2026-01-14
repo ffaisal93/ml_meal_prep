@@ -379,15 +379,15 @@ main {
 }
 
 .warning-banner {
-    background: linear-gradient(135deg, #ff6b00, #ff8c00);
-    border: 2px solid #ff6b00;
+    background: linear-gradient(135deg, #e91e63, #f06292);
+    border: 2px solid #e91e63;
     border-radius: 12px;
     padding: 16px 20px;
     margin: 20px 0;
     display: flex;
     align-items: center;
     gap: 12px;
-    box-shadow: 0 4px 12px rgba(255, 107, 0, 0.4);
+    box-shadow: 0 4px 12px rgba(233, 30, 99, 0.4);
 }
 
 .warning-icon {
@@ -397,11 +397,11 @@ main {
 }
 
 .warning-banner span:last-child {
-    color: #ffffff;
+    color: #000000;
     font-size: 0.95rem;
     line-height: 1.5;
     font-weight: 600;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
 }
 
 .mode-badge {
