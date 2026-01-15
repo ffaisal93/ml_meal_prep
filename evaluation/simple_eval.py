@@ -17,7 +17,7 @@ async def evaluate_diversity_custom(strategy="llm_only", days=3, query=None):
     Simple evaluation: Generate one meal plan and check diversity
     
     Args:
-        strategy: "llm_only", "rag", or "hybrid"
+        strategy: "llm_only", "rag", "hybrid", or "fast_llm"
         days: Number of days (1-7)
         query: Custom query string (optional)
     """
@@ -152,7 +152,7 @@ async def evaluate_diversity(strategy="llm_only", days=3):
 
 if __name__ == "__main__":
     print("\n🔍 Simple Diversity Evaluation")
-    print("Testing all 3 strategies (LLM-Only, RAG, Hybrid)")
+    print("Testing all 4 strategies (LLM-Only, RAG, Hybrid, Fast LLM)")
     print("Configurations:")
     print("  1. 1-day (2 meals)")
     print("  2. 2-day vegetarian (EXCLUDE Mediterranean)")
